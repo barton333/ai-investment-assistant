@@ -1,0 +1,13 @@
+{
+  "name": "investment-assistant",
+  "version": "1.0.0",
+  "description": "AI Investment Assistant - 中国股票基金投资分析助手",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

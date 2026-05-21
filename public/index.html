@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Investment Assistant · 智能投资助手</title>
+  <meta name="description" content="基于AI的全市场股票基金分析与投资建议系统">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* Loading overlay */
+    #loadingOverlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 10, 18, 0.8);
+      backdrop-filter: blur(10px);
+      z-index: 300;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 20px;
+    }
+    #loadingOverlay .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid rgba(255,255,255,0.05);
+      border-top: 3px solid var(--accent-green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== BACKGROUND EFFECT ========== -->
+  <div class="bg-effect">
+    <div class="orb"></div>
+    <div class="orb"></div>
+    <div class="orb"></div>
+  </div>
+
+  <!-- ========== LOADING ========== -->
+  <div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div style="font-size:14px;color:var(--text-secondary);">加载市场数据...</div>
+  </div>
+
+  <!-- ========== DATA UPDATED TOAST ========== -->
+  <div id="dataUpdated" class="data-updated">
+    <i class="fas fa-check-circle"></i> 数据已更新
+  </div>
+
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📈</div>
+      <div class="logo-text">AI 投资助手</div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-section="dashboard">
+        <span class="nav-icon"><i class="fas fa-th-large"></i></span>
+        仪表盘
+      </button>
+      <button class="nav-item" data-section="funds">
+        <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
+        TOP 5 基金
+        <span class="nav-badge">5</span>
+      </button>
+      <button class="nav-item" data-section="ai">
+        <span class="nav-icon"><i class="fas fa-brain"></i></span>
+        AI 分析
+      </button>
+      <button class="nav-item" data-section="news">
+        <span class="nav-icon"><i class="fas fa-newspaper"></i></span>
+        全球热点
+      </button>
+      <button class="nav-item" data-section="advice">
+        <span class="nav-icon"><i class="fas fa-lightbulb"></i></span>
+        投资建议
+      </button>
+      <button class="nav-item" data-section="usd">
+        <span class="nav-icon"><i class="fas fa-dollar-sign"></i></span>
+        美元投资
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="nav-item refresh-btn" onclick="App.manualRefresh()">
+        <span class="nav-icon"><i class="fas fa-sync-alt"></i></span>
+        刷新数据
+      </button>
+      <div style="padding:8px 16px;font-size:11px;color:var(--text-tertiary);">
+        <i class="far fa-clock"></i> 自动刷新: 每5分钟
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========== SIDEBAR OVERLAY (mobile) ========== -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- ========== MAIN CONTENT ========== -->
+  <main class="main-content" id="mainContent">
+
+    <!-- Header -->
+    <header class="header" style="position:relative;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="mobile-nav-toggle" id="mobileNavToggle" style="display:none;">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="header-left">
+          <div class="header-title">
+            <h1>智能投资仪表盘</h1>
+            <p>基于AI深度学习的全市场股票基金分析系统</p>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="header-time">
+          <i class="far fa-clock"></i>
+          <span>更新于 <strong id="updateTime">--</strong></span>
+        </div>
+        <div class="header-time">
+          <i class="fas fa-sync-alt"></i>
+          <span>下次刷新 <strong id="timerDisplay">05:00</strong></span>
+          <div class="countdown-bar">
+            <div class="fill"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- News Ticker -->
+    <div class="news-ticker">
+      <div class="news-ticker-header">
+        <i class="fas fa-bolt"></i>
+        实时快讯 · 市场动态
+      </div>
+      <div class="news-ticker-content" id="newsTicker">
+        <span style="color:var(--text-tertiary);font-size:13px;">加载中...</span>
+      </div>
+    </div>
+
+    <!-- ============ SECTION: DASHBOARD ============ -->
+    <section id="section-dashboard" class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="icon green"><i class="fas fa-chart-line"></i></span>
+          市场概览
+          <span class="section-subtitle">主要指数实时行情</span>
+        </div>
+      </div>
+      <div class="grid-3" id="marketCards">
+        <div class="card market-card"><div class="skeleton" style="height:120px;"></div></div>
+        <div class="card market-card"><div class="skeleton" style="height:120px;"></div></div>
+        <div class="card market-card"><div class="skeleton" style="height:120px;"></div></div>
+        <div class="card market-card"><div class="skeleton" style="height:120px;"></div></div>
+        <div class="card market-card"><div class="skeleton" style="height:120px;"></div></div>
+        <div class="card market-card"><div class="skeleton" style="height:120px;"></div></div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: TOP 5 FUNDS ============ -->
+    <section id="section-funds" class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="icon blue"><i class="fas fa-trophy"></i></span>
+          TOP 5 推荐基金排行
+          <span class="section-subtitle">基于AI多因子评分</span>
+        </div>
+      </div>
+      <div id="topFunds">
+        <div class="card" style="padding:40px;text-align:center;">
+          <div class="skeleton" style="height:200px;margin-bottom:12px;"></div>
+          <div class="skeleton" style="height:200px;margin-bottom:12px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: AI ANALYSIS ============ -->
+    <section id="section-ai" class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="icon cyan"><i class="fas fa-brain"></i></span>
+          AI 深度分析报告
+          <span class="section-subtitle">多因子模型 · NLP舆情 · 量化策略</span>
+        </div>
+      </div>
+      <div id="aiInsights">
+        <div class="card"><div class="skeleton" style="height:300px;"></div></div>
+      </div>
+      <div class="section-header" style="margin-top:24px;">
+        <div class="section-title">
+          <span class="icon cyan"><i class="fas fa-robot"></i></span>
+          各基金AI分析详情
+        </div>
+      </div>
+      <div id="aiAnalysis">
+        <div class="card" style="padding:40px;text-align:center;color:var(--text-tertiary);">加载中...</div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: GLOBAL NEWS ============ -->
+    <section id="section-news" class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="icon orange"><i class="fas fa-newspaper"></i></span>
+          全球热点新闻
+          <span class="section-subtitle">影响市场的最新动态</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-tertiary);">
+          <i class="fas fa-robot"></i> AI自动分析市场影响
+        </div>
+      </div>
+      <div id="globalNews">
+        <div class="card" style="padding:40px;text-align:center;color:var(--text-tertiary);">加载中...</div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: INVESTMENT ADVICE ============ -->
+    <section id="section-advice" class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="icon green"><i class="fas fa-lightbulb"></i></span>
+          投资策略建议
+          <span class="section-subtitle">多周期配置方案</span>
+        </div>
+      </div>
+      <div class="grid-2" id="investmentAdvice">
+        <div class="card"><div class="skeleton" style="height:200px;"></div></div>
+        <div class="card"><div class="skeleton" style="height:200px;"></div></div>
+      </div>
+    </section>
+
+    <!-- ============ SECTION: USD INVESTMENT ============ -->
+    <section id="section-usd" class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="icon purple"><i class="fas fa-dollar-sign"></i></span>
+          美元现汇投资产品
+          <span class="section-subtitle">中国银行体系内美元可投资产品</span>
+        </div>
+      </div>
+      <div class="grid-3" id="usdProducts">
+        <div class="card"><div class="skeleton" style="height:100px;"></div></div>
+        <div class="card"><div class="skeleton" style="height:100px;"></div></div>
+        <div class="card"><div class="skeleton" style="height:100px;"></div></div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="margin-top:48px;padding:20px 0;border-top:1px solid var(--border-color);text-align:center;font-size:13px;color:var(--text-tertiary);">
+      <div style="margin-bottom:8px;">
+        <i class="fas fa-robot" style="color:var(--accent-cyan);"></i>
+        AI Investment Assistant · 智能投资助手
+      </div>
+      <div>
+        所有数据仅供参考，不构成投资建议 · 基金有风险，投资需谨慎 · 
+        数据每5分钟自动更新
+      </div>
+      <div style="margin-top:4px;font-size:11px;">
+        Powered by Deep Learning · 多因子量化模型 · NLP舆情分析
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- ============ MODAL: Fund Detail ============ -->
+  <div class="modal-overlay" id="fundModal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="App.closeFundModal()">
+        <i class="fas fa-times"></i>
+      </button>
+      <div id="fundModalBody">
+        <div style="text-align:center;padding:20px;">
+          <div class="skeleton" style="height:200px;margin-bottom:12px;"></div>
+          <div class="skeleton" style="height:60px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,5 +1,12 @@
 const express = require('express');
 const path = require('path');
+const realtimeManager = require('./services/realtimeManager');
+const realtimeFundProvider = require('./services/realtimeFundProvider');
+const realtimeFundHistoryProvider = require('./services/realtimeFundHistoryProvider');
+const realtimeNewsProvider = require('./services/realtimeNewsProvider');
+const realtimeGlobalIndicesProvider = require('./services/realtimeGlobalIndicesProvider');
+const realtimeHotSectorsProvider = require('./services/realtimeHotSectorsProvider');
+const cache = require('./services/cacheManager');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -106,9 +113,9 @@ function seededRandom() {
   return dataSeed / 233280;
 }
 
-function generateMarketOverview() {
-  // Simulate realistic market indices
-  const baseValues = {
+function generateMarketOverview(realtimeData) {
+  // 默认 mock 基准值（当实时数据缺失时降级使用）
+  const mockBaseValues = {
     '上证指数': { base: 3250, vol: 3 },
     '深证成指': { base: 10800, vol: 5 },
     '沪深300': { base: 3950, vol: 3.5 },
@@ -118,16 +125,53 @@ function generateMarketOverview() {
   };
 
   const indices = {};
-  for (const [name, config] of Object.entries(baseValues)) {
+
+  // 优先使用实时数据（经过交叉验证的）
+  if (realtimeData?.indices) {
+    for (const [name, info] of Object.entries(realtimeData.indices)) {
+      indices[name] = {
+        value: info.value,
+        change: info.change,
+        changePercent: info.changePercent,
+        trend: info.trend,
+        source: 'realtime',
+        source_quality: info.source_quality,
+      };
+    }
+  }
+
+  // 合并实时汇率
+  if (realtimeData?.fx) {
+    for (const [name, info] of Object.entries(realtimeData.fx)) {
+      indices[name] = {
+        value: info.value,
+        change: info.change,
+        changePercent: info.changePercent,
+        trend: info.trend,
+        source: 'realtime',
+        source_quality: info.source_quality,
+      };
+    }
+  }
+
+  // 对缺失的指数使用 mock 数据降级
+  for (const [name, config] of Object.entries(mockBaseValues)) {
+    if (indices[name]) continue;
+
     const change = (seededRandom() - 0.5) * config.vol;
     const changePercent = (change / config.base * 100);
     indices[name] = {
       value: (config.base + change).toFixed(name.includes('美元') ? 4 : 2),
       change: change.toFixed(name.includes('美元') ? 4 : 2),
       changePercent: changePercent.toFixed(2),
-      trend: change >= 0 ? 'up' : 'down'
+      trend: change >= 0 ? 'up' : 'down',
+      source: 'mock',
+      source_quality: 'fallback_mock',
     };
+
+    console.log(`  ⚠️  ${name} 无实时数据，使用模拟值降级`);
   }
+
   return indices;
 }
 
@@ -145,14 +189,7 @@ function generateTopFunds(count = 5) {
     { rank: 5, week: 1.6, month: 5.2, quarter: 9.8, halfYear: 14.2, year: 25.4, score: 78, risk: '中', rating: 4 },
   ];
 
-  // AI analysis for each fund
-  const aiAnalyses = [
-    `AI深度分析：该基金重仓${top[0]?.focus || '核心赛道'}板块，近期受益于政策利好和资金流入，表现强劲。基于机器学习模型预测，未来1-3个月该基金在同类产品中有85%概率跑赢基准指数。量化评分显示，其夏普比率处于行业前10%，风险调整后收益优异。建议作为核心配置持有，占比不超过总投资组合的20%。`,
-    `AI深度分析：该基金在${top[1]?.focus || '重点领域'}具备独特选股策略，基金经理历史超额收益稳定。NLP舆情分析显示，该基金持仓股近期正面新闻占比78%，市场情绪偏积极。技术面呈现多头排列，短期均线上穿长期均线，建议关注回调后的配置机会。`,
-    `AI深度分析：该基金持仓分散，行业配置均衡，在震荡市中防御性较强。基于蒙特卡洛模拟，未来半年获得正收益的概率为72%。当前估值处于历史中等偏低分位，安全边际较充足。建议作为组合中的压舱石配置，适合稳健型投资者。`,
-    `AI深度分析：该基金聚焦高成长领域，近期受益于行业景气度回升。因子分析显示，其动量因子和成长因子贡献了主要超额收益。建议投资者关注行业政策变化，设置5-8%的止盈止损线。短线交易者可在行业ETF与该基金之间做轮动策略。`,
-    `AI深度分析：该基金近期业绩表现稳健，波动率控制优于同类平均水平。机构持仓比例持续提升，显示专业投资者对其认可度较高。建议在组合中作为卫星配置，与其他风格基金形成互补，以获取更优的风险收益比。`,
-  ];
+  // AI analysis will be generated dynamically in generateFullData after merging real data
 
   // Investment advice specific to each fund
   const advices = [
@@ -170,9 +207,86 @@ function generateTopFunds(count = 5) {
     todayChange: (seededRandom() * 4 - 1).toFixed(2),
     nav: (seededRandom() * 5 + 1.5).toFixed(4),
     fundSize: `${(seededRandom() * 80 + 10).toFixed(1)}亿`,
-    aiAnalysis: aiAnalyses[i],
+    // aiAnalysis will be generated in generateFullData after merging real data
     advice: advices[i],
   }));
+}
+
+/**
+ * 基于真实基金数据生成动态 AI 分析文本
+ */
+function generateDynamicAnalysis(fund) {
+  const { name, focus, week, month, quarter, halfYear, year, score, risk, type, todayChange, nav } = fund;
+  
+  // 确定各周期的涨跌描述
+  const trendWord = (val) => {
+    if (val == null) return '暂无数据';
+    if (val > 5) return `强势上涨 +${val}%`;
+    if (val > 2) return `显著上涨 +${val}%`;
+    if (val > 0.5) return `小幅上涨 +${val}%`;
+    if (val > -0.5) return `基本持平 ${val}%`;
+    if (val > -2) return `小幅回调 ${val}%`;
+    if (val > -5) return `明显下跌 ${val}%`;
+    return `大幅下跌 ${val}%`;
+  };
+
+  const weekStr = week != null ? trendWord(week) : '暂无数据';
+  const monthStr = month != null ? trendWord(month) : '暂无数据';
+  const yearStr = year != null ? trendWord(year) : '暂无数据';
+
+  // 判断近期表现方向
+  const recentPositive = (week || 0) + (month || 0) > 0;
+  const longTermPositive = (year || 0) > 0;
+
+  // 表现评级
+  let perfRating = '一般';
+  if (recentPositive && longTermPositive) perfRating = '优秀';
+  else if (recentPositive) perfRating = '短期偏强';
+  else if (longTermPositive) perfRating = '长期稳健';
+
+  // 今日表现
+  const todayNum = parseFloat(todayChange);
+  const todayStr = todayNum >= 0 ? `今日上涨 ${todayNum}%` : `今日下跌 ${Math.abs(todayNum)}%`;
+
+  // 组合建议
+  let suggestion;
+  const scoreNum = parseInt(score);
+  if (scoreNum >= 90) suggestion = '建议作为核心配置持有，占比不超过总投资组合的20%';
+  else if (scoreNum >= 80) suggestion = '建议作为卫星配置，关注回调后的布局机会';
+  else if (scoreNum >= 70) suggestion = '建议保持观望，等待更明确的入场信号';
+  else suggestion = '建议谨慎参与，控制仓位风险';
+
+  // 风险提示
+  let riskNote;
+  if (risk && risk.includes('高')) riskNote = '该基金风险等级较高，净值波动较大，建议设置5-8%止损线';
+  else riskNote = '该基金风险适中，适合中长期持有';
+
+  return `AI深度分析：${name}（${type}）重仓${focus || '核心赛道'}领域。近期表现方面，近1周${weekStr}，近1月${monthStr}，近1年${yearStr}，整体呈现${perfRating}态势。${todayStr}，当前净值为${nav}元。AI综合评分${scoreNum}分，${riskNote}。${suggestion}。`;
+}
+
+/**
+ * 基于真实数据生成投资建议理由
+ */
+function generateDynamicAdvice(fund) {
+  const { week, month, score } = fund;
+  const w = week || 0;
+  const m = month || 0;
+  const s = parseInt(score);
+
+  // 综合判断：近期表现+评分
+  if (w > 0 && m > 0 && s >= 85) {
+    return { action: '推荐买入', reason: '短期走强+中期向上+高评分，三因子共振', confidence: '★★★★★', target: '6-12个月持有' };
+  }
+  if (w > -1 && m > -2 && s >= 80) {
+    return { action: '推荐持有', reason: '基本面稳健+估值合理+行业景气度向上', confidence: '★★★★☆', target: '中长期配置' };
+  }
+  if (w < -2 && m < -3 && s >= 80) {
+    return { action: '逢低加仓', reason: '短期回调不改长期趋势，当前具备安全边际', confidence: '★★★★☆', target: '分3批建仓' };
+  }
+  if (s >= 70) {
+    return { action: '关注等待', reason: '等待行业催化剂出现，右侧确认后介入更稳妥', confidence: '★★★☆☆', target: '观察1-2周' };
+  }
+  return { action: '观望', reason: '市场不确定性较高，建议控制仓位', confidence: '★★☆☆☆', target: '等待信号' };
 }
 
 function generateGlobalNews() {
@@ -271,44 +385,263 @@ function generateAIInsights(topFunds) {
 let cachedData = null;
 let lastGenerate = 0;
 
-function generateFullData() {
+async function generateFullData(realtimeData) {
+  // 生成基金排名（mock），然后尝试融合实时净值
   const topFunds = generateTopFunds(5);
+  const fundCodes = topFunds.map(f => f.code);
+
+  let fundNavData = null;
+  try {
+    fundNavData = await realtimeFundProvider.fetchFundsNAV(fundCodes);
+    if (fundNavData && Object.keys(fundNavData).length > 0) {
+      // 融合实时净值到基金数据中
+      for (const fund of topFunds) {
+        const real = fundNavData[fund.code];
+        if (real) {
+          fund.nav = real.nav;
+          fund.todayChange = real.todayChange;
+          fund.navPrev = real.navPrev;
+          fund.navDate = real.navDate;
+          fund.gzTime = real.gzTime;
+          fund.source = 'realtime';
+        }
+      }
+      console.log(`  💰 基金净值: ${Object.keys(fundNavData).length}/${fundCodes.length} 只已更新`);
+    }
+  } catch (err) {
+    console.error('  ⚠️ 基金净值获取失败（将使用模拟值）:', err.message);
+  }
+
+  // 获取基金历史业绩（近1周/近1月等）
+  let fundHistoryData = null;
+  try {
+    fundHistoryData = await realtimeFundHistoryProvider.fetchFundHistory(fundCodes);
+    if (fundHistoryData && Object.keys(fundHistoryData).length > 0) {
+      // 融合真实历史业绩到基金数据中
+      let merged = 0;
+      for (const fund of topFunds) {
+        const hist = fundHistoryData[fund.code];
+        if (hist) {
+          if (hist.week !== null) {
+            fund.week = parseFloat(hist.week);
+            fund.weekDate = hist.weekDate;
+            merged++;
+          }
+          if (hist.month !== null) {
+            fund.month = parseFloat(hist.month);
+            fund.monthDate = hist.monthDate;
+          }
+          if (hist.quarter !== null) {
+            fund.quarter = parseFloat(hist.quarter);
+          }
+          if (hist.halfYear !== null) {
+            fund.halfYear = parseFloat(hist.halfYear);
+          }
+          if (hist.year !== null) {
+            fund.year = parseFloat(hist.year);
+          }
+          if (hist.navHistory && hist.navHistory.length > 10) {
+            fund.navHistory = hist.navHistory;
+          }
+          fund.historySource = hist.source;
+        }
+      }
+      console.log(`  📈 历史业绩: ${merged}/${fundCodes.length} 只已更新`);
+    }
+  } catch (err) {
+    console.error('  ⚠️ 历史业绩获取失败（将使用模拟值）:', err.message);
+  }
+
+  // 用真实数据重新生成 AI 分析文本
+  for (const fund of topFunds) {
+    fund.aiAnalysis = generateDynamicAnalysis(fund);
+    fund.advice = generateDynamicAdvice(fund);
+  }
+
+  // 获取全球指数
+  let globalIndicesData = null;
+  try {
+    globalIndicesData = await realtimeGlobalIndicesProvider.fetchGlobalIndices();
+    if (globalIndicesData && Object.keys(globalIndicesData).length > 0) {
+      console.log(`  🌍 全球指数: ${Object.keys(globalIndicesData).length} 个已获取`);
+    }
+  } catch (err) {
+    console.error('  ⚠️ 全球指数获取失败:', err.message);
+  }
+
+  // 获取热门板块动量
+  let hotSectorsData = null;
+  try {
+    const sectorsResult = await realtimeHotSectorsProvider.fetchHotSectors();
+    if (sectorsResult && sectorsResult.hotSectors && sectorsResult.hotSectors.length > 0) {
+      hotSectorsData = sectorsResult;
+      console.log(`  🔥 板块动量: ${sectorsResult.hotSectors.length} 个已更新 (${sectorsResult.sentiment})`);
+    }
+  } catch (err) {
+    console.error('  ⚠️ 板块动量获取失败（将使用模拟值）:', err.message);
+  }
+
+  // 获取实时快讯新闻（华尔街见闻）
+  let realtimeNews = null;
+  try {
+    realtimeNews = await realtimeNewsProvider.fetchNews();
+    if (realtimeNews && realtimeNews.length > 0) {
+      console.log(`  📰 实时新闻: ${realtimeNews.length} 条已获取`);
+    }
+  } catch (err) {
+    console.error('  ⚠️ 实时新闻获取失败（将使用模拟值）:', err.message);
+  }
+
+  // 生成市场概览（A股指数 + 全球指数）
+  const marketOverview = generateMarketOverview(realtimeData || {});
+  // 合并全球指数
+  if (globalIndicesData) {
+    for (const [name, info] of Object.entries(globalIndicesData)) {
+      marketOverview[name] = {
+        value: info.value,
+        change: info.change,
+        changePercent: info.changePercent,
+        trend: info.trend,
+        source: 'realtime',
+        source_quality: info.source_quality,
+      };
+    }
+  }
+
   const data = {
     timestamp: new Date().toISOString(),
-    marketOverview: generateMarketOverview(),
+    marketOverview: marketOverview,
     topFunds: topFunds,
     usdProducts: usdProducts,
-    globalNews: generateGlobalNews(),
+    globalNews: realtimeNews && realtimeNews.length >= 4 ? realtimeNews : generateGlobalNews(),
     investmentAdvice: generateInvestmentAdvice(topFunds),
-    aiInsights: generateAIInsights(topFunds),
+    aiInsights: (() => {
+      const insights = generateAIInsights(topFunds);
+      // 替换热门板块为真实数据
+      if (hotSectorsData && hotSectorsData.hotSectors && hotSectorsData.hotSectors.length >= 3) {
+        insights.hotSectors = hotSectorsData.hotSectors;
+        insights.marketSentiment = hotSectorsData.sentiment;
+        // 更新预测摘要加入板块信息
+        insights.prediction = `基于真实板块数据，当前市场情绪${hotSectorsData.sentiment}。${
+          hotSectorsData.hotSectors[0]?.name || '热门板块'
+        }板块表现最为活跃，短期可重点关注。量化模型显示，市场风险溢价处于历史中高水平，权益类资产具备较好的配置性价比。`;
+      }
+      return insights;
+    })(),
+    _meta: {
+      indices_source: realtimeData?.indices ? 'realtime' : 'mock',
+      indices_quality: realtimeData?.indices
+        ? Object.values(realtimeData.indices).some(v => v.source_quality === 'cross_validated')
+          ? 'cross_validated'
+          : 'single_source'
+        : 'fallback_mock',
+      global_indices_source: globalIndicesData && Object.keys(globalIndicesData).length > 0 ? 'realtime' : 'mock',
+      sectors_source: hotSectorsData && hotSectorsData.hotSectors?.length >= 3 ? 'realtime' : 'mock',
+      funds_source: fundNavData && Object.keys(fundNavData).length > 0 ? 'realtime' : 'mock',
+      funds_history_source: fundHistoryData && Object.values(fundHistoryData).some(v => v.week !== null) ? 'realtime' : 'mock',
+      news_source: realtimeNews && realtimeNews.length >= 4 ? 'realtime' : 'mock',
+    },
   };
   cachedData = data;
   lastGenerate = Date.now();
   return data;
 }
 
-// Generate data immediately
-generateFullData();
+// Initialize: load realtime data + start auto-refresh
+async function initialize() {
+  try {
+    // 启动实时数据源的定时刷新
+    realtimeManager.startAutoRefresh();
+    // 首次拉取实时数据
+    const realtimeData = await realtimeManager.forceRefresh();
+    await generateFullData(realtimeData);
+    console.log(`[${new Date().toISOString()}] ✅ 实时数据初始化完成`);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] ⚠️ 实时数据初始化失败，使用模拟数据:`, err.message);
+    await generateFullData();
+  }
+}
 
-// Regenerate data every 5 minutes
-setInterval(() => {
-  generateFullData();
-  console.log(`[${new Date().toISOString()}] Data refreshed`);
+initialize();
+
+// Periodically regenerate mock derivative data (fund ranking, AI analysis, news)
+// while realtime indices/fx are refreshed independently by realtimeManager
+setInterval(async () => {
+  try {
+    const realtimeData = await realtimeManager.getData();
+    await generateFullData(realtimeData);
+    console.log(`[${new Date().toISOString()}] 🔄 数据已更新 (指数: ${realtimeData?.indices ? '实时' : '模拟'})`);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] 数据刷新失败:`, err.message);
+  }
 }, 5 * 60 * 1000);
 
-// API endpoint
-app.get('/api/data', (req, res) => {
-  // Force refresh if ?refresh=true
-  if (req.query.refresh === 'true') {
-    const data = generateFullData();
+// API endpoint — 返回完整数据
+app.get('/api/data', async (req, res) => {
+  try {
+    if (req.query.refresh === 'true') {
+      // 强制刷新：清除缓存 + 重新拉取实时数据 + 重新生成衍生数据
+      cache.invalidateAll();
+      const realtimeData = await realtimeManager.forceRefresh();
+      const data = await generateFullData(realtimeData);
+      return res.json(data);
+    }
+    res.json(cachedData);
+  } catch (err) {
+    console.error('API /api/data error:', err.message);
+    // 出错时返回缓存（如果有）或降级 mock
+    if (cachedData) return res.json(cachedData);
+    const data = await generateFullData();
     return res.json(data);
   }
-  res.json(cachedData);
+});
+
+// 缓存状态 — 查看各数据源缓存命中率
+app.get('/api/cache', (req, res) => {
+  res.json(cache.stats());
+});
+
+// 清除缓存
+app.post('/api/cache/flush', (req, res) => {
+  cache.invalidateAll();
+  res.json({ ok: true, message: '缓存已清除' });
+});
+
+// Debug endpoint — 查看各数据源原始返回
+app.get('/api/debug', async (req, res) => {
+  try {
+    const realtimeData = await realtimeManager.getData();
+    res.json({
+      timestamp: new Date().toISOString(),
+      indices: realtimeData.indices,
+      fx: realtimeData.fx,
+      raw: {
+        sina: realtimeData.raw?.sina ? '[已获取]' : '[未获取]',
+        tencent: realtimeData.raw?.tencent ? '[已获取]' : '[未获取]',
+        eastmoney: realtimeData.raw?.eastmoney ? '[已获取]' : '[未获取]',
+      },
+      _meta: cachedData?._meta || null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', lastUpdate: cachedData.timestamp });
+  const meta = cachedData?._meta || {};
+  res.json({
+    status: 'ok',
+    lastUpdate: cachedData?.timestamp || null,
+    indicesSource: meta.indices_source || 'unknown',
+    indicesQuality: meta.indices_quality || 'unknown',
+    globalIndicesSource: meta.global_indices_source || 'mock',
+    sectorsSource: meta.sectors_source || 'mock',
+    fundsSource: meta.funds_source || 'mock',
+    fundsHistorySource: meta.funds_history_source || 'mock',
+    newsSource: meta.news_source || 'mock',
+    realtimeProviders: '新浪财经 + 腾讯财经 + 东方财富(指数+全球) + 天天基金(净值+历史) + 华尔街见闻(新闻)',
+  });
 });
 
 // Serve static files
@@ -321,8 +654,13 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`\n  🔮 Investment Assistant Server`);
-  console.log(`  ─────────────────────────`);
+  console.log(`  ─────────────────────────────`);
   console.log(`  🌐 http://localhost:${PORT}`);
   console.log(`  📊 API: http://localhost:${PORT}/api/data`);
-  console.log(`  ⏰ Auto-refresh every 5 minutes\n`);
+  console.log(`  🔍 Debug: http://localhost:${PORT}/api/debug`);
+  console.log(`  📡 A股指数: 新浪+腾讯+东方财富 (交叉验证)`);
+  console.log(`  🌍 全球指数: 东方财富+新浪 (恒生/美股/日经/黄金/原油)`);
+  console.log(`  💰 基金数据: 天天基金 (净值+全周期历史)`);
+  console.log(`  📰 实时新闻: 华尔街见闻 (关键字情绪分析)`);
+  console.log(`  ⏰ 自动刷新: 每5分钟\n`);
 });

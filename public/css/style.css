@@ -383,6 +383,69 @@ a:hover { text-decoration: underline; }
   margin-top: 12px;
   height: 40px;
 }
+/* Market data source badges */
+.market-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+}
+.market-badge.badge-green {
+  background: rgba(16,185,129,0.15);
+  color: var(--accent-green);
+}
+.market-badge.badge-blue {
+  background: rgba(59,130,246,0.15);
+  color: var(--accent-blue);
+}
+.market-badge.badge-gray {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-tertiary);
+}
+.market-card { position: relative; }
+
+/* Trend bar for index cards */
+.trend-bar {
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.trend-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+.trend-fill.up { background: var(--accent-green); }
+.trend-fill.down { background: var(--accent-red); }
+
+/* Sparkline chart */
+.fund-sparkline {
+  margin: 6px 0 4px;
+  opacity: 0.7;
+}
+.fund-sparkline svg {
+  border-radius: 4px;
+}
+
+/* Fund source badge */
+.fund-source-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(16,185,129,0.15);
+  color: var(--accent-green);
+  margin-left: 6px;
+  vertical-align: middle;
+  letter-spacing: 0.3px;
+}
 
 /* Fund Card */
 .fund-card {
@@ -964,6 +1027,21 @@ a:hover { text-decoration: underline; }
 .ticker-dot.green { background: var(--accent-green); }
 .ticker-dot.red { background: var(--accent-red); }
 .ticker-dot.orange { background: var(--accent-orange); }
+
+/* News source badge */
+.news-source-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(99,102,241,0.15);
+  color: #818cf8;
+  margin-left: 8px;
+  vertical-align: middle;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
 
 /* Expand/Collapse */
 .expandable-content {

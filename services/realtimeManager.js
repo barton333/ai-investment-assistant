@@ -3,6 +3,7 @@
 const sinaProvider = require('./sinaProvider');
 const tencentProvider = require('./tencentProvider');
 const eastmoneyProvider = require('./eastmoneyProvider');
+const internationalProvider = require('./internationalProvider');
 const { validateIndices, validateFX } = require('./crossValidator');
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;   // 5 分钟全量刷新
@@ -42,9 +43,9 @@ async function refreshAll() {
 
   console.log(`[${new Date().toISOString()}] 🔄 实时数据刷新中...`);
 
-  // --- 并行拉取指数（3 源） ---
-  let sinaIndices = null, tencentIndices = null, eastmoneyIndices = null;
-  let sinaFX = null, tencentFX = null;
+  // --- 并行拉取指数（3 国内源 + 1 国际源） ---
+  let sinaIndices = null, tencentIndices = null, eastmoneyIndices = null, intlIndices = null;
+  let sinaFX = null, tencentFX = null, intlFX = null;
 
   try {
     const results = await Promise.allSettled([
@@ -53,11 +54,13 @@ async function refreshAll() {
       eastmoneyProvider.fetchIndices().then(d => { eastmoneyIndices = d; return d; }),
       sinaProvider.fetchFX().then(d => { sinaFX = d; return d; }),
       tencentProvider.fetchFX().then(d => { tencentFX = d; return d; }),
+      internationalProvider.fetchInternationalIndices().then(d => { intlIndices = d; return d; }),
+      internationalProvider.fetchInternationalFX().then(d => { intlFX = d; return d; }),
     ]);
 
     // 记录每个源的状态
     const status = results.map((r, i) => {
-      const names = ['新浪指数', '腾讯指数', '东方财富指数', '新浪汇率', '腾讯汇率'];
+      const names = ['新浪指数', '腾讯指数', '东方财富指数', '新浪汇率', '腾讯汇率', '国际指数', '国际汇率'];
       return r.status === 'fulfilled' ? `✓${names[i]}` : `✗${names[i]}`;
     });
     console.log(`  ${status.join(' ')}`);
@@ -71,17 +74,19 @@ async function refreshAll() {
     sina: sinaIndices,
     tencent: tencentIndices,
     eastmoney: eastmoneyIndices,
+    international: intlIndices,
     sinaFX,
     tencentFX,
+    internationalFX: intlFX,
   };
 
-  // --- 交叉验证指数 ---
-  const indicesSources = [sinaIndices, tencentIndices, eastmoneyIndices];
-  const validatedIndices = validateIndices(indicesSources, SOURCE_NAMES);
+  // --- 交叉验证指数（国内源 + 国际源） ---
+  const indicesSources = [sinaIndices, tencentIndices, eastmoneyIndices, intlIndices];
+  const validatedIndices = validateIndices(indicesSources, ['新浪', '腾讯', '东方财富', 'Yahoo国际']);
 
-  // --- 交叉验证汇率 ---
-  const fxSources = [sinaFX, tencentFX];
-  const validatedFX = validateFX(fxSources, ['新浪汇率', '腾讯汇率']);
+  // --- 交叉验证汇率（国内源 + 国际源） ---
+  const fxSources = [sinaFX, tencentFX, intlFX];
+  const validatedFX = validateFX(fxSources, ['新浪汇率', '腾讯汇率', '国际汇率']);
 
   // --- 缓存更新 ---
   cachedData.indices = validatedIndices;

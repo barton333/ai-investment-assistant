@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "express": "^4.18.2",
+    "https-proxy-agent": "^7.0.4",
+    "http-proxy-agent": "^7.0.2",
     "iconv-lite": "^0.7.2"
   }
 }

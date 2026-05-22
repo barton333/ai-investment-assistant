@@ -10,6 +10,15 @@ const cache = require('./services/cacheManager');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ============ 代理配置检测 ============
+const proxyUrl = process.env.INVEST_PROXY || process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+if (proxyUrl) {
+  console.log(`  🔗 代理已配置: ${proxyUrl.replace(/\/\/.*@/, '//***@')}`);
+} else {
+  console.log(`  ⚠️  未配置代理，从海外访问国内数据源可能失败`);
+  console.log(`  💡 建议设置环境变量 INVEST_PROXY 指向国内代理服务器`);
+}
+
 // ============ MOCK DATA GENERATORS ============
 
 // Realistic Chinese fund data

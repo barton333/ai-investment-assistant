@@ -529,6 +529,7 @@ async function generateFullData(realtimeData) {
       return insights;
     })(),
     _meta: {
+      generated_at: new Date().toISOString(),
       indices_source: realtimeData?.indices ? 'realtime' : 'mock',
       indices_quality: realtimeData?.indices
         ? Object.values(realtimeData.indices).some(v => v.source_quality === 'cross_validated')
@@ -540,6 +541,16 @@ async function generateFullData(realtimeData) {
       funds_source: fundNavData && Object.keys(fundNavData).length > 0 ? 'realtime' : 'mock',
       funds_history_source: fundHistoryData && Object.values(fundHistoryData).some(v => v.week !== null) ? 'realtime' : 'mock',
       news_source: realtimeNews && realtimeNews.length >= 4 ? 'realtime' : 'mock',
+    },
+    // 各数据组的新鲜度（秒）
+    _age: {
+      indices: realtimeData?.timestamp ? Math.round((Date.now() - new Date(realtimeData.timestamp).getTime()) / 1000) : -1,
+      funds: fundNavData ? 0 : -1,
+      fund_history: fundHistoryData ? 0 : -1,
+      global_indices: globalIndicesData ? 0 : -1,
+      sectors: hotSectorsData ? 0 : -1,
+      news: realtimeNews ? 0 : -1,
+      generated: 0,
     },
   };
   cachedData = data;
@@ -564,17 +575,18 @@ async function initialize() {
 
 initialize();
 
-// Periodically regenerate mock derivative data (fund ranking, AI analysis, news)
-// while realtime indices/fx are refreshed independently by realtimeManager
+// 定期全量刷新（每120秒）
 setInterval(async () => {
   try {
-    const realtimeData = await realtimeManager.getData();
+    // 强制刷新：清除所有缓存
+    cache.invalidateAll();
+    const realtimeData = await realtimeManager.forceRefresh();
     await generateFullData(realtimeData);
     console.log(`[${new Date().toISOString()}] 🔄 数据已更新 (指数: ${realtimeData?.indices ? '实时' : '模拟'})`);
   } catch (err) {
     console.error(`[${new Date().toISOString()}] 数据刷新失败:`, err.message);
   }
-}, 5 * 60 * 1000);
+}, 2 * 60 * 1000);
 
 // API endpoint — 返回完整数据
 app.get('/api/data', async (req, res) => {
@@ -662,5 +674,5 @@ app.listen(PORT, () => {
   console.log(`  🌍 全球指数: 东方财富+新浪 (恒生/美股/日经/黄金/原油)`);
   console.log(`  💰 基金数据: 天天基金 (净值+全周期历史)`);
   console.log(`  📰 实时新闻: 华尔街见闻 (关键字情绪分析)`);
-  console.log(`  ⏰ 自动刷新: 每5分钟\n`);
+  console.log(`  ⏰ 自动刷新: 每2分钟\n`);
 });

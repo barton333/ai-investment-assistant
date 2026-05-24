@@ -372,7 +372,8 @@ const App = {
       const highlightClass = news.impact.includes('利好') && i < 2 ? 'news-highlight' : news.impact.includes('利空') ? 'news-warning' : '';
       
       return `
-        <div class="card news-card fade-in stagger-${Math.min(i+1, 5)} ${highlightClass}">
+        <div class="card news-card fade-in stagger-${Math.min(i+1, 5)} ${highlightClass}"
+             onclick="App.openNewsDetail(${i})" style="cursor:pointer;">
           <div class="news-header">
             <span class="news-impact ${impactClass}">${news.impact}</span>
             <div style="flex:1;">
@@ -388,7 +389,10 @@ const App = {
             <span><i class="far fa-building"></i> ${news.source}</span>
             <span><i class="far fa-clock"></i> ${news.time}</span>
             <span><i class="far fa-calendar"></i> ${news.date}</span>
-            ${news.uri ? `<span><i class="fas fa-external-link-alt"></i> <a href="${news.uri}" target="_blank" style="color:var(--accent-cyan);text-decoration:none;">查看原文</a></span>` : ''}
+            ${news.uri ? `<span><i class="fas fa-external-link-alt"></i> <a href="${news.uri}" target="_blank" onclick="event.stopPropagation();" style="color:var(--accent-cyan);text-decoration:none;">查看原文</a></span>` : ''}
+          </div>
+          <div class="news-click-hint">
+            <i class="fas fa-chevron-right"></i> 点击查看深度分析
           </div>
         </div>
       `;
@@ -523,22 +527,95 @@ const App = {
     `;
   },
 
-  // --- News Ticker ---
+  // --- News Ticker (自动滚动) ---
   renderNewsTicker() {
     const container = document.getElementById('newsTicker');
     if (!container || !this.data.globalNews) return;
 
-    const tickerItems = this.data.globalNews.slice(0, 6).map(news => {
+    const items = this.data.globalNews.slice(0, 8).map((news, i) => {
       const dotColor = news.impact.includes('利好') ? 'green' : news.impact.includes('利空') ? 'red' : 'orange';
       return `
-        <span class="ticker-item">
+        <span class="ticker-item" onclick="App.openNewsDetail(${i})" title="点击查看详情">
           <span class="ticker-dot ${dotColor}"></span>
           ${news.topic}
         </span>
       `;
-    }).join('');
+    });
 
-    container.innerHTML = tickerItems;
+    // 复制一份实现无缝滚动
+    container.innerHTML = `
+      <div class="ticker-track">
+        <div class="ticker-group">${items.join('')}</div>
+        <div class="ticker-group">${items.join('')}</div>
+      </div>
+    `;
+  },
+
+  // ============ NEWS DETAIL MODAL ============
+
+  openNewsDetail(index) {
+    const news = this.data.globalNews[index];
+    if (!news) return;
+
+    const modal = document.getElementById('newsModal');
+    const body = document.getElementById('newsModalBody');
+
+    const impactClass = news.impact.includes('利好') ? '利好' : news.impact.includes('利空') ? '利空' : '中性';
+    const impactIcon = impactClass === '利好' ? 'arrow-up' : impactClass === '利空' ? 'arrow-down' : 'minus';
+    const impactColor = impactClass === '利好' ? 'var(--accent-green)' : impactClass === '利空' ? 'var(--accent-red)' : 'var(--accent-orange)';
+
+    body.innerHTML = `
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <span class="news-impact ${impactClass}" style="font-size:14px;padding:4px 14px;">${news.impact}</span>
+          <span style="font-size:12px;color:var(--text-tertiary);"><i class="far fa-building"></i> ${news.source} · ${news.time}</span>
+        </div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:8px;">${news.topic}</div>
+        <div style="font-size:13px;color:var(--text-secondary);"><i class="far fa-calendar"></i> ${news.date}</div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px;color:${impactColor};">
+          <i class="fas fa-${impactIcon}"></i> 市场影响分析
+        </div>
+        <div style="font-size:14px;line-height:1.9;color:var(--text-secondary);padding:16px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid ${impactColor};">
+          ${news.detail}
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px;">
+          <i class="fas fa-tags" style="color:var(--accent-cyan);"></i> 受影响板块
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${news.affectedSectors.map(s => `<span style="padding:6px 14px;border-radius:20px;font-size:13px;background:rgba(59,130,246,0.1);color:var(--accent-blue);border:1px solid rgba(59,130,246,0.15);">${s}</span>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px;padding:16px;background:rgba(16,185,129,0.05);border-radius:8px;border:1px solid rgba(16,185,129,0.12);">
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px;">
+          <i class="fas fa-robot" style="color:var(--accent-cyan);"></i> AI 策略建议
+        </div>
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.7;">
+          ${impactClass === '利好' 
+            ? '该消息对市场形成正面催化，建议关注相关板块龙头标的的布局机会。可适当增加配置比例，但需注意短期情绪过热风险。建议结合技术面确认入场时机。'
+            : impactClass === '利空' 
+              ? '该消息对市场形成短期压力，建议降低相关板块仓位或使用对冲工具。等待风险充分释放后再考虑介入，关注政策面可能出台的缓冲措施。'
+              : '该消息对市场影响中性，建议维持当前配置不变。关注后续进展，等待更明确的信号出现后再做调整。'}
+        </div>
+      </div>
+
+      <div style="font-size:12px;color:var(--text-tertiary);padding-top:12px;border-top:1px solid var(--border-color);">
+        <i class="fas fa-info-circle"></i> AI分析基于NLP情感分析模型，仅供参考，不构成投资建议。
+        ${news.uri ? `<span style="margin-left:12px;"><a href="${news.uri}" target="_blank" style="color:var(--accent-cyan);">查看原文 <i class="fas fa-external-link-alt"></i></a></span>` : ''}
+      </div>
+    `;
+
+    modal.classList.add('show');
+  },
+
+  closeNewsModal() {
+    document.getElementById('newsModal').classList.remove('show');
   },
 
   // ============ FUND DETAIL MODAL ============
@@ -757,9 +834,13 @@ document.addEventListener('DOMContentLoaded', () => App.init());
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('modal-overlay')) {
     App.closeFundModal();
+    App.closeNewsModal();
   }
 });
 // Close modal on Escape
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') App.closeFundModal();
+  if (e.key === 'Escape') {
+    App.closeFundModal();
+    App.closeNewsModal();
+  }
 });

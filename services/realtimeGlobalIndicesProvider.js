@@ -17,6 +17,7 @@ const GLOBAL_INDICES = [
   { name: '纳斯达克',   source: 'sina_gb',   code: 'gb_ixic' },
   { name: '黄金',       source: 'sina_hf',   code: 'hf_GC',   decimals: 2, label: '美元/盎司' },
   { name: '原油',       source: 'sina_hf',   code: 'hf_CL',   decimals: 2, label: '美元/桶' },
+  { name: '白银',       source: 'sina_hf',   code: 'hf_SI',   decimals: 2, label: '美元/盎司' },
   { name: '上证50',     source: 'sina_index', code: 'sh000016' },
   { name: '中证500',    source: 'sina_index', code: 'sh000905' },
   { name: '中证1000',   source: 'sina_index', code: 'sh000852' },

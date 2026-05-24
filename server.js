@@ -131,6 +131,10 @@ function generateMarketOverview(realtimeData) {
     '创业板指': { base: 2150, vol: 4 },
     '科创50': { base: 980, vol: 3 },
     '美元/人民币': { base: 7.18, vol: 0.05 },
+    '黄金': { base: 2330, vol: 20 },
+    '白银': { base: 29.50, vol: 0.8 },
+    '比特币': { base: 67500, vol: 2000 },
+    '原油': { base: 78.5, vol: 2.5 },
   };
 
   const indices = {};

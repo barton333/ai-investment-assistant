@@ -266,7 +266,24 @@ const allProducts = [
   { code:'ASHR',name:'Xtrackers Harvest CSI 300 沪深300ETF',type:'美股ETF', market:'美股ETF', focus:'沪深300' },
 
   // ─── 用户补充的代码 ───
-  { code:'013138',name:'中欧智能制造混合A',type:'混合型', market:'A股基金', focus:'智能制造/高端制造' },
+  // ─── 债券基金（债基/指数债基） ───
+  { code:'013138',name:'上银中债5-10年国开行债券指数A',type:'指数型', market:'A股基金', focus:'债券/利率债/国开债' },
+  { code:'006961',name:'南方中债7-10年国开行债券指数A',type:'指数型', market:'A股基金', focus:'债券/国开债' },
+  { code:'003221',name:'新华丰利债券A',type:'债券型', market:'A股基金', focus:'债券/信用债' },
+  { code:'007148',name:'南方中债1-3年国开行债券指数A',type:'指数型', market:'A股基金', focus:'债券/国开债' },
+  { code:'006848',name:'博时中债5-10年国开行债券A',type:'指数型', market:'A股基金', focus:'债券/国开债' },
+  { code:'010262',name:'嘉实中债1-3年政金债指数A',type:'指数型', market:'A股基金', focus:'债券/政金债' },
+  { code:'009292',name:'易方达中债1-5年国开行A',type:'指数型', market:'A股基金', focus:'债券/国开债' },
+  { code:'007445',name:'南方中债0-5年中行债指数A',type:'指数型', market:'A股基金', focus:'债券/利率债' },
+  { code:'008730',name:'天弘中债1-5年国开行A',type:'指数型', market:'A股基金', focus:'债券/国开债' },
+  { code:'008990',name:'东方红鑫裕两年定开债',type:'债券型', market:'A股基金', focus:'债券/定开债' },
+  { code:'110017',name:'易方达增强回报债券A',type:'债券型', market:'A股基金', focus:'债券/增强型' },
+  { code:'485111',name:'工银瑞信双利债券A',type:'债券型', market:'A股基金', focus:'债券/双利' },
+  { code:'202101',name:'南方宝元债券A',type:'债券型', market:'A股基金', focus:'债券/偏债混合' },
+  { code:'110007',name:'易方达稳健收益债券A',type:'债券型', market:'A股基金', focus:'债券/稳健' },
+  { code:'050011',name:'博时信用债券A',type:'债券型', market:'A股基金', focus:'债券/信用债' },
+  { code:'001512',name:'易方达中债3-5年国开行A',type:'指数型', market:'A股基金', focus:'债券/国开债' },
+  // ─── A股补充 ───
   { code:'002610',name:'爱康科技',type:'A股', market:'A股股票', focus:'光伏/新能源/电池' },
   { code:'015283',name:'华夏新能源龙头混合A',type:'混合型', market:'A股基金', focus:'新能源/龙头' },
   { code:'014189',name:'嘉实产业领先混合A',type:'混合型', market:'A股基金', focus:'产业领先' },

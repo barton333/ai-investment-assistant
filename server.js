@@ -1155,7 +1155,73 @@ app.get('/api/funds/lookup', async (req, res) => {
       }
     }
 
-    // ── 如果实时查询没结果，回退到数据库搜索 ──
+    // ── 网页搜索兜底：爬取东方财富/天天基金页面 ──
+    if (results.length === 0 && isNumeric && q.length >= 6) {
+      try {
+        // 尝试1: 天天基金详情页抓取基金名称
+        const detailHtml = await fetchText(`https://fund.eastmoney.com/${q}.html`, { timeout: 8000, retries: 1 }).catch(() => null);
+        if (detailHtml) {
+          const nameMatch = detailHtml.match(/<title>([^<]+?)\(/) || detailHtml.match(/<h1[^>]*>([^<]+?)</);
+          let fundName = nameMatch ? nameMatch[1].trim() : null;
+          if (fundName) {
+            // 清理名称
+            fundName = fundName.replace(/[\s\n\r]+/g, ' ').trim();
+            const typeLabel = fundName.includes('债券') ? '债券型' : fundName.includes('货币') ? '货币型' : fundName.includes('指数') ? '指数型' : '混合型';
+            results.push({
+              code: q, name: fundName, type: typeLabel, focus: typeLabel,
+              nav: '--', todayChange: '--', todayChangePct: '--',
+              source: 'web_scrape', market: 'A股基金', sourceLabel: '东方财富页面抓取',
+            });
+          }
+        }
+
+        // 尝试2: 东方财富搜索API
+        if (results.length === 0) {
+          const searchResp = await fetchText(
+            `https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx?m=1&key=${q}`,
+            { timeout: 8000, retries: 1, encoding: 'utf-8' }
+          ).catch(() => null);
+          if (searchResp) {
+            try {
+              const searchData = JSON.parse(searchResp);
+              if (searchData?.Datas && searchData.Datas.length > 0) {
+                const first = searchData.Datas[0];
+                const name = first.CODE + ' ' + first.NAME || q;
+                results.push({
+                  code: first.CODE || q, name: first.NAME || q, type: first.TYPE || '基金',
+                  focus: first.FUNDTYPE || '基金', nav: '--', todayChange: '--', todayChangePct: '--',
+                  source: 'web_scrape', market: 'A股基金', sourceLabel: '东方财富搜索',
+                });
+              }
+            } catch (e) { /* ignore parse errors */ }
+          }
+        }
+
+        // 尝试3: 通过天天基金JSONP获取名称（仅名称，净值已有）
+        if (results.length === 0) {
+          const fundJsonp = await fetchText(`http://fundgz.1234567.com.cn/js/${q}.js`, { timeout: 5000 }).catch(() => null);
+          if (fundJsonp) {
+            const jsonMatch = fundJsonp.match(/\{.*\}/);
+            if (jsonMatch) {
+              const f = JSON.parse(jsonMatch[0]);
+              if (f && f.name) {
+                const name = decodeURIComponent(f.name) || f.name;
+                results.push({
+                  code: q, name: name, type: '公募基金', focus: '基金',
+                  nav: f.dwjz || f.gsz || '--', todayChange: f.jzzzl || f.gszzl || '0.00',
+                  todayChangePct: f.jzzzl || f.gszzl || '0.00',
+                  source: 'tiantian_jsonp', market: 'A股基金', sourceLabel: '天天基金实时',
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Web scrape fallback error:', err.message);
+      }
+    }
+
+    // ── 最后回退到数据库搜索 ──
     if (results.length === 0) {
       const dbEntry = allProducts.find(p => p.code === q);
       if (dbEntry) {

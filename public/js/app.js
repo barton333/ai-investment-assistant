@@ -759,8 +759,41 @@ const App = {
         resultsEl.innerHTML = `
           <div class="card" style="margin-top:12px;padding:20px;text-align:center;color:var(--text-tertiary);">
             <i class="fas fa-search-minus" style="font-size:32px;display:block;margin-bottom:8px;opacity:0.4;"></i>
-            未找到匹配"${q}"的产品
-            <p style="font-size:12px;margin-top:8px;">提示：试试输入基金 6 位代码（如 110022）或中文名称（如 易方达）</p>
+            数据库中暂未收录 "<strong>${q}</strong>"
+          </div>
+          <div class="card" style="margin-top:12px;padding:20px;border:1px dashed rgba(16,185,129,0.3);background:rgba(16,185,129,0.03);">
+            <div style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--accent-green);">
+              <i class="fas fa-plus-circle"></i> 手动添加 — 输入产品信息
+            </div>
+            <div class="portfolio-add-form">
+              <div class="form-row">
+                <div class="form-group" style="flex:1;">
+                  <label>代码</label>
+                  <input type="text" id="manualCode" value="${q}" class="form-input" readonly style="opacity:0.7;">
+                </div>
+                <div class="form-group" style="flex:2;">
+                  <label>产品名称 *</label>
+                  <input type="text" id="manualName" placeholder="如 中欧智能制造混合A" class="form-input">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label>买入价 * (元)</label>
+                  <input type="number" id="manualPrice" placeholder="如 1.50" step="0.001" class="form-input">
+                </div>
+                <div class="form-group" style="flex:1;">
+                  <label>份额 *</label>
+                  <input type="number" id="manualShares" placeholder="如 1000" step="1" class="form-input">
+                </div>
+                <div class="form-group" style="flex:0 0 auto;">
+                  <label>&nbsp;</label>
+                  <button class="btn btn-primary" onclick="App.confirmManualAdd()">
+                    <i class="fas fa-plus"></i> 手动添加
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:10px;font-size:12px;color:var(--text-tertiary);">
+              <i class="fas fa-info-circle"></i> 不会自动获取最新价，需等待系统后续匹配或手动更新。盈亏基于买入价跟踪。
+            </div>
           </div>
         `;
         return;
@@ -931,6 +964,48 @@ const App = {
     document.getElementById('portfolioSearchResults').innerHTML = '';
     document.getElementById('portfolioSearchInput').value = '';
     document.getElementById('portfolioSearchInput').focus();
+  },
+
+  /** 手动添加未收录的产品（搜索不到时使用） */
+  confirmManualAdd() {
+    const code = document.getElementById('manualCode').value.trim();
+    const name = document.getElementById('manualName').value.trim();
+    const price = parseFloat(document.getElementById('manualPrice').value);
+    const shares = parseFloat(document.getElementById('manualShares').value);
+
+    if (!name) {
+      this.showToast('请输入产品名称', 'error');
+      return;
+    }
+    if (!price || price <= 0) {
+      this.showToast('请输入有效的买入价格', 'error');
+      return;
+    }
+    if (!shares || shares <= 0) {
+      this.showToast('请输入有效的持有份额', 'error');
+      return;
+    }
+
+    this.portfolio.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      code: code,
+      name: name,
+      purchasePrice: price,
+      shares: shares,
+      addedAt: new Date().toISOString(),
+      isIndex: false,
+      manualEntry: true,
+    });
+
+    this.savePortfolio();
+    this.renderPortfolio();
+
+    // 清空搜索框
+    document.getElementById('portfolioSearchInput').value = '';
+    document.getElementById('portfolioSearchResults').innerHTML = '';
+
+    this.showToast('✅ ' + name + ' 已手动添加到投资组合', 'success');
+    document.getElementById('section-portfolio').scrollIntoView({ behavior: 'smooth' });
   },
 
   /** 向后兼容：从现有数据按代码查找（供渲染持仓使用） */

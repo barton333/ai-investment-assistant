@@ -264,6 +264,19 @@ const allProducts = [
   { code:'FXI',name:'iShares China Large-Cap ETF 中国大盘ETF',type:'美股ETF', market:'美股ETF', focus:'中国大盘股' },
   { code:'KWEB',name:'KraneShares CSI China Internet ETF 中概互联网ETF',type:'美股ETF', market:'美股ETF', focus:'中概股/互联网' },
   { code:'ASHR',name:'Xtrackers Harvest CSI 300 沪深300ETF',type:'美股ETF', market:'美股ETF', focus:'沪深300' },
+
+  // ─── 用户补充的代码 ───
+  { code:'013138',name:'中欧智能制造混合A',type:'混合型', market:'A股基金', focus:'智能制造/高端制造' },
+  { code:'002610',name:'爱康科技',type:'A股', market:'A股股票', focus:'光伏/新能源/电池' },
+  { code:'015283',name:'华夏新能源龙头混合A',type:'混合型', market:'A股基金', focus:'新能源/龙头' },
+  { code:'014189',name:'嘉实产业领先混合A',type:'混合型', market:'A股基金', focus:'产业领先' },
+  { code:'012603',name:'东方新能源主题混合',type:'混合型', market:'A股基金', focus:'新能源/光伏' },
+  { code:'016021',name:'华安新能源主题混合A',type:'混合型', market:'A股基金', focus:'新能源/汽车' },
+  { code:'011251',name:'富国新能源车A',type:'混合型', market:'A股基金', focus:'新能源车' },
+  { code:'012831',name:'南方新能源产业混合A',type:'混合型', market:'A股基金', focus:'新能源产业' },
+  { code:'002448',name:'中原内配',type:'A股', market:'A股股票', focus:'汽车零部件/制造' },
+  { code:'002459',name:'晶澳科技',type:'A股', market:'A股股票', focus:'光伏/新能源' },
+  { code:'300763',name:'锦浪科技',type:'A股', market:'A股股票', focus:'光伏逆变器' },
 ];
 
 // USD investment options from Chinese banks

@@ -64,6 +64,10 @@
         <span class="nav-icon"><i class="fas fa-th-large"></i></span>
         仪表盘
       </button>
+      <button class="nav-item" data-section="portfolio">
+        <span class="nav-icon"><i class="fas fa-briefcase"></i></span>
+        投资组合
+      </button>
       <button class="nav-item" data-section="funds">
         <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
         TOP 5 基金
@@ -141,6 +145,73 @@
         <span style="color:var(--text-tertiary);font-size:13px;">加载中...</span>
       </div>
     </div>
+
+    <!-- ============ SECTION: PORTFOLIO ============ -->
+    <section id="section-portfolio" class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="icon gold"><i class="fas fa-briefcase"></i></span>
+          我的投资组合
+          <span class="section-subtitle">持仓盈亏分析 · 智能调仓建议</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-tertiary);">
+          <i class="fas fa-database"></i> <span id="portfolioCount">0</span> 只产品 · 
+          自动保存至本地
+        </div>
+      </div>
+
+      <!-- 添加表单 -->
+      <div class="card" style="padding:20px;margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:12px;">
+          <i class="fas fa-plus-circle" style="color:var(--accent-green);"></i> 添加持仓
+        </div>
+        <div class="portfolio-add-form">
+          <div class="form-row">
+            <div class="form-group" style="flex:2;">
+              <label>基金/股票代码</label>
+              <input type="text" id="portfolioCodeInput" placeholder="如 110022 / 000001" class="form-input">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>买入净值/价格 (元)</label>
+              <input type="number" id="portfolioPriceInput" placeholder="如 2.50" step="0.001" class="form-input">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>持有份额/股数</label>
+              <input type="number" id="portfolioSharesInput" placeholder="如 1000" step="1" class="form-input">
+            </div>
+            <div class="form-group" style="flex:0 0 auto;">
+              <label>&nbsp;</label>
+              <button class="btn btn-primary" onclick="App.addPortfolioItem()">
+                <i class="fas fa-plus"></i> 添加
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 持仓列表 -->
+      <div id="portfolioList">
+        <div class="card" style="text-align:center;padding:40px;color:var(--text-tertiary);">
+          <i class="fas fa-inbox" style="font-size:40px;display:block;margin-bottom:12px;opacity:0.4;"></i>
+          <p>还没有持仓记录，输入基金/股票代码开始追踪</p>
+          <p style="font-size:12px;">支持：公募基金代码（6位）或 A股股票代码（6位）</p>
+        </div>
+      </div>
+
+      <!-- AI 组合分析 -->
+      <div id="portfolioAnalysis" style="display:none;">
+        <div class="section-header" style="margin-top:8px;">
+          <div class="section-title">
+            <span class="icon cyan"><i class="fas fa-robot"></i></span>
+            AI 组合分析报告
+            <span class="section-subtitle">综合市场情绪与持仓诊断</span>
+          </div>
+        </div>
+        <div class="card" id="portfolioAnalysisContent" style="padding:20px;">
+          <div class="skeleton" style="height:200px;"></div>
+        </div>
+      </div>
+    </section>
 
     <!-- ============ SECTION: DASHBOARD ============ -->
     <section id="section-dashboard" class="section">

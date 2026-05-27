@@ -7,6 +7,7 @@ const App = {
   remainingSeconds: 300,
   isRefreshing: false,
   currentSection: 'dashboard',
+  portfolio: [],
 
   // DOM Cache
   els: {},
@@ -14,6 +15,8 @@ const App = {
   init() {
     this.cacheElements();
     this.bindEvents();
+    this.loadPortfolio();
+    this.initScrollSpy();
     this.startAutoRefresh();
     this.fetchData().then(() => {
       this.renderAll();
@@ -202,6 +205,7 @@ const App = {
     this.renderUSDProducts();
     this.renderAIInsights();
     this.renderNewsTicker();
+    this.renderPortfolio();
   },
 
   // --- Market Overview ---
@@ -691,6 +695,372 @@ const App = {
 
   closeFundModal() {
     document.getElementById('fundModal').classList.remove('show');
+  },
+
+  // ============ SCROLL SPY ============
+
+  initScrollSpy() {
+    const sectionEls = document.querySelectorAll('.section[id^="section-"]');
+    if (!sectionEls.length) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const sectionId = entry.target.id.replace('section-', '');
+          this.currentSection = sectionId;
+          this.updateNavActive(sectionId);
+        }
+      });
+    }, { threshold: 0.25, rootMargin: '-60px 0px -40% 0px' });
+
+    sectionEls.forEach(s => observer.observe(s));
+  },
+
+  updateNavActive(sectionId) {
+    this.els.navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.section === sectionId);
+    });
+  },
+
+  // ============ PORTFOLIO ============
+
+  loadPortfolio() {
+    try {
+      const saved = localStorage.getItem('investment_portfolio');
+      this.portfolio = saved ? JSON.parse(saved) : [];
+    } catch {
+      this.portfolio = [];
+    }
+  },
+
+  savePortfolio() {
+    localStorage.setItem('investment_portfolio', JSON.stringify(this.portfolio));
+  },
+
+  findFundByCode(code) {
+    if (!this.data || !this.data.topFunds) return null;
+    // 精确匹配 fund code
+    const exact = this.data.topFunds.find(f => f.code === code);
+    if (exact) return { ...exact, currentNav: parseFloat(exact.nav) };
+
+    // 模糊匹配 fundTemplate 数据（从 server 端完整列表）
+    // 也检查所有全球市场指数
+    if (this.data.marketOverview) {
+      for (const [name, info] of Object.entries(this.data.marketOverview)) {
+        if (name.includes(code) || code.includes(name)) {
+          return { name, code: '--', currentNav: parseFloat(info.value), nav: info.value, isIndex: true, trend: info.trend };
+        }
+      }
+    }
+    return null;
+  },
+
+  addPortfolioItem() {
+    const codeInput = document.getElementById('portfolioCodeInput');
+    const priceInput = document.getElementById('portfolioPriceInput');
+    const sharesInput = document.getElementById('portfolioSharesInput');
+
+    const code = codeInput.value.trim();
+    const price = parseFloat(priceInput.value);
+    const shares = parseFloat(sharesInput.value);
+
+    if (!code) {
+      this.showToast('请输入基金/股票代码', 'error');
+      return;
+    }
+    if (!price || price <= 0) {
+      this.showToast('请输入有效的买入价格', 'error');
+      return;
+    }
+    if (!shares || shares <= 0) {
+      this.showToast('请输入有效的持有份额', 'error');
+      return;
+    }
+
+    // 检查是否已添加
+    if (this.portfolio.some(p => p.code === code && p.purchasePrice === price)) {
+      this.showToast('该持仓已存在，请勿重复添加', 'error');
+      return;
+    }
+
+    // 查找匹配的基金信息
+    const matched = this.findFundByCode(code);
+
+    this.portfolio.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      code: code,
+      name: matched ? matched.name : code + '(未匹配)',
+      purchasePrice: price,
+      shares: shares,
+      addedAt: new Date().toISOString(),
+      matchedCode: matched ? matched.code : null,
+      isIndex: matched ? matched.isIndex : false,
+    });
+
+    this.savePortfolio();
+    this.renderPortfolio();
+
+    // 清空输入
+    codeInput.value = '';
+    priceInput.value = '';
+    sharesInput.value = '';
+
+    this.showToast('✅ ' + code + ' 已添加到投资组合', 'success');
+
+    // 滚动到组合列表
+    document.getElementById('section-portfolio').scrollIntoView({ behavior: 'smooth' });
+  },
+
+  removePortfolioItem(id) {
+    if (!confirm('确定移除此持仓？')) return;
+    this.portfolio = this.portfolio.filter(p => p.id !== id);
+    this.savePortfolio();
+    this.renderPortfolio();
+    this.showToast('已移除', 'success');
+  },
+
+  renderPortfolio() {
+    const listContainer = document.getElementById('portfolioList');
+    const countEl = document.getElementById('portfolioCount');
+    const analysisSection = document.getElementById('portfolioAnalysis');
+    if (!listContainer) return;
+
+    countEl.textContent = this.portfolio.length;
+
+    if (this.portfolio.length === 0) {
+      listContainer.innerHTML = `
+        <div class="card" style="text-align:center;padding:40px;color:var(--text-tertiary);">
+          <i class="fas fa-inbox" style="font-size:40px;display:block;margin-bottom:12px;opacity:0.4;"></i>
+          <p>还没有持仓记录，输入基金/股票代码开始追踪</p>
+          <p style="font-size:12px;">支持：公募基金代码（6位）或 A股股票代码（6位）</p>
+        </div>
+      `;
+      analysisSection.style.display = 'none';
+      return;
+    }
+
+    analysisSection.style.display = 'block';
+
+    // 计算每项的当前价格和盈亏
+    const items = this.portfolio.map(p => {
+      const matched = this.findFundByCode(p.code);
+      const currentNav = matched ? matched.currentNav : null;
+      const pnl = currentNav != null ? ((currentNav - p.purchasePrice) / p.purchasePrice * 100) : null;
+      const costTotal = p.purchasePrice * p.shares;
+      const currentTotal = currentNav != null ? currentNav * p.shares : null;
+      const pnlTotal = currentTotal != null ? currentTotal - costTotal : null;
+      return { ...p, matched, currentNav, pnl, costTotal, currentTotal, pnlTotal };
+    });
+
+    // 汇总
+    const totalCost = items.reduce((s, i) => s + i.costTotal, 0);
+    const totalCurrent = items.reduce((s, i) => s + (i.currentTotal || 0), 0);
+    const totalPnl = totalCurrent - totalCost;
+    const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost * 100) : 0;
+    const positiveCount = items.filter(i => i.pnl != null && i.pnl > 0).length;
+    const negativeCount = items.filter(i => i.pnl != null && i.pnl < 0).length;
+
+    // 汇总卡片
+    let html = `
+      <div class="portfolio-summary">
+        <div class="portfolio-summary-item">
+          <div class="label">总投资成本</div>
+          <div class="value" style="color:var(--text-primary);">¥${totalCost.toFixed(2)}</div>
+        </div>
+        <div class="portfolio-summary-item">
+          <div class="label">当前市值</div>
+          <div class="value" style="color:var(--text-primary);">¥${totalCurrent.toFixed(2)}</div>
+        </div>
+        <div class="portfolio-summary-item">
+          <div class="label">总盈亏</div>
+          <div class="value ${totalPnl >= 0 ? 'positive' : 'negative'}">${totalPnl >= 0 ? '+' : ''}¥${totalPnl.toFixed(2)}</div>
+        </div>
+        <div class="portfolio-summary-item">
+          <div class="label">总收益率</div>
+          <div class="value ${totalPnlPct >= 0 ? 'positive' : 'negative'}">${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%</div>
+        </div>
+        <div class="portfolio-summary-item">
+          <div class="label">盈利/亏损产品</div>
+          <div class="value" style="font-size:16px;">
+            <span style="color:var(--accent-green);">${positiveCount}</span>
+            /
+            <span style="color:var(--accent-red);">${negativeCount}</span>
+          </div>
+        </div>
+        <div class="portfolio-summary-item">
+          <div class="label">持仓数量</div>
+          <div class="value" style="color:var(--accent-cyan);">${items.length}</div>
+        </div>
+      </div>
+
+      <div class="card" style="overflow-x:auto;padding:0;">
+        <table class="portfolio-table">
+          <thead>
+            <tr>
+              <th>代码</th>
+              <th>名称</th>
+              <th style="text-align:right;">买入价</th>
+              <th style="text-align:right;">最新价</th>
+              <th style="text-align:right;">持仓</th>
+              <th style="text-align:right;">成本</th>
+              <th style="text-align:right;">市值</th>
+              <th style="text-align:right;">盈亏</th>
+              <th style="text-align:right;">收益率</th>
+              <th style="text-align:center;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    items.forEach(i => {
+      const pnlClass = i.pnl == null ? 'pl-neutral' : i.pnl >= 0 ? 'pl-positive' : 'pl-negative';
+      const pnlStr = i.pnl == null ? 'N/A' : (i.pnl >= 0 ? '+' : '') + i.pnl.toFixed(2) + '%';
+      const pnlAmount = i.pnlTotal != null ? ((i.pnlTotal >= 0 ? '+' : '') + '¥' + i.pnlTotal.toFixed(2)) : 'N/A';
+      const currentNavStr = i.currentNav != null ? i.currentNav.toFixed(4) : '--';
+
+      html += `
+        <tr>
+          <td><span class="portfolio-code">${i.code}</span></td>
+          <td><span class="portfolio-name">${i.name}</span></td>
+          <td style="text-align:right;">¥${i.purchasePrice.toFixed(4)}</td>
+          <td style="text-align:right;font-weight:600;">${currentNavStr}</td>
+          <td style="text-align:right;">${i.shares.toFixed(0)}</td>
+          <td style="text-align:right;">¥${i.costTotal.toFixed(2)}</td>
+          <td style="text-align:right;">${i.currentTotal != null ? '¥' + i.currentTotal.toFixed(2) : '--'}</td>
+          <td style="text-align:right;" class="${pnlClass}">${pnlAmount}</td>
+          <td style="text-align:right;" class="${pnlClass}">${pnlStr}</td>
+          <td style="text-align:center;">
+            <button class="btn btn-danger btn-sm" onclick="App.removePortfolioItem('${i.id}')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table></div>';
+
+    listContainer.innerHTML = html;
+
+    // === AI 组合分析 ===
+    this.renderPortfolioAnalysis(items, totalPnlPct, positiveCount, negativeCount);
+  },
+
+  renderPortfolioAnalysis(items, totalPnlPct, positiveCount, negativeCount) {
+    const container = document.getElementById('portfolioAnalysisContent');
+    if (!container) return;
+
+    const marketSentiment = this.data?.aiInsights?.marketSentiment || '中性';
+    const confidence = this.data?.aiInsights?.aiConfidenceIndex || '--';
+
+    let html = '<div style="margin-bottom:16px;">';
+    html += '<div style="font-size:14px;font-weight:600;margin-bottom:10px;"><i class="fas fa-chart-pie" style="color:var(--accent-cyan);"></i> 持仓诊断报告</div>';
+    html += '<div style="font-size:13px;color:var(--text-secondary);line-height:1.8;margin-bottom:12px;">';
+    html += '当前市场情绪：<strong>' + marketSentiment + '</strong> · ';
+    html += 'AI信心指数：<strong style="color:var(--accent-green);">' + confidence + '%</strong></div>';
+    html += '</div>';
+
+    // 逐一分析持仓项
+    html += '<div style="margin-bottom:12px;"><div style="font-size:14px;font-weight:600;margin-bottom:10px;"><i class="fas fa-search" style="color:var(--accent-blue);"></i> 逐项诊断</div>';
+
+    items.forEach((item) => {
+      if (item.pnl == null) {
+        html += '<div class="portfolio-advice-item hold">';
+        html += '<span class="advice-icon">⚪</span>';
+        html += '<div class="advice-text"><div class="advice-title">' + item.name + ' (' + item.code + ')</div>';
+        html += '<div class="advice-detail">当前无匹配价格数据，无法计算盈亏。建议确认代码是否正确。</div></div></div>';
+        return;
+      }
+
+      let action, icon, adviceText;
+
+      if (item.pnl > 20) {
+        action = 'reduce';
+        icon = '⚠️';
+        adviceText = '盈利超过20%，建议考虑部分止盈锁定收益。市场上没有只涨不跌的资产，落袋为安是稳健策略。';
+      } else if (item.pnl > 10) {
+        action = 'hold';
+        icon = '✅';
+        adviceText = '盈利状况良好，建议继续持有。结合当前' + marketSentiment + '的市场情绪，该仓位表现符合预期。';
+      } else if (item.pnl > 0) {
+        action = 'hold';
+        icon = '📈';
+        adviceText = '小幅盈利中。建议保持持有，关注该基金后续表现和市场整体走势，设置5%的回撤止盈线。';
+      } else if (item.pnl > -10) {
+        action = 'hold';
+        icon = '📉';
+        adviceText = '小幅亏损，属于正常波动范围。建议继续持有观察，无需恐慌清仓。可结合定投策略摊低成本。';
+      } else if (item.pnl > -20) {
+        action = 'reduce';
+        icon = '🔻';
+        adviceText = '亏损超过10%，建议评估是否继续持有。检查该基金的基本面是否发生变化，考虑减仓控制风险。';
+      } else {
+        action = 'sell';
+        icon = '🚨';
+        adviceText = '亏损超过20%，触发风险预警。建议认真分析持仓原因：是否行业整体下行？是否基金本身出现问题？必要时止损离场。';
+      }
+
+      // 结合热点新闻的影响
+      const sentimentBoost = item.pnl > 0 && this.data?.aiInsights?.marketSentiment?.includes('乐观') ? '（当前市场情绪积极，有助于继续上行）' : '';
+      const sentimentRisk = item.pnl < 0 && this.data?.aiInsights?.marketSentiment?.includes('谨慎') ? '（市场情绪偏谨慎，建议控制仓位）' : '';
+
+      html += '<div class="portfolio-advice-item ' + action + '">';
+      html += '<span class="advice-icon">' + icon + '</span>';
+      html += '<div class="advice-text">';
+      html += '<div class="advice-title">' + item.name + ' (' + item.code + ') · ' + (item.pnl >= 0 ? '+' : '') + item.pnl.toFixed(2) + '%</div>';
+      html += '<div class="advice-detail">' + adviceText + sentimentBoost + sentimentRisk;
+      html += ' 买入价 ¥' + item.purchasePrice.toFixed(4) + ' → 最新价 ¥' + (item.currentNav || 0).toFixed(4);
+      html += '</div></div></div>';
+    });
+
+    html += '</div>';
+
+    // 组合层面的建议
+    html += '<div style="margin-top:12px;"><div style="font-size:14px;font-weight:600;margin-bottom:10px;"><i class="fas fa-lightbulb" style="color:var(--accent-orange);"></i> 组合优化建议</div>';
+
+    if (items.length < 3) {
+      html += '<div class="portfolio-advice-item buy">';
+      html += '<span class="advice-icon">💡</span>';
+      html += '<div class="advice-text"><div class="advice-title">持仓分散度不足</div>';
+      html += '<div class="advice-detail">当前仅持有' + items.length + '只产品，建议分散到3-5只不同行业的基金/股票，降低单一品种风险。可参考TOP 5推荐中的基金进行配置。</div></div></div>';
+    }
+
+    if (negativeCount > positiveCount && negativeCount >= 2) {
+      html += '<div class="portfolio-advice-item reduce">';
+      html += '<span class="advice-icon">⚠️</span>';
+      html += '<div class="advice-text"><div class="advice-title">亏损面偏大</div>';
+      html += '<div class="advice-detail">超过一半的持仓处于亏损状态。建议重新评估投资策略：检查是否追高买入、是否行业集中度过高、是否需要部分止损。</div></div></div>';
+    }
+
+    if (totalPnlPct > 15) {
+      html += '<div class="portfolio-advice-item reduce">';
+      html += '<span class="advice-icon">💰</span>';
+      html += '<div class="advice-text"><div class="advice-title">整体盈利丰厚</div>';
+      html += '<div class="advice-detail">总收益率超过15%，建议考虑部分止盈，将利润落袋为安。可适当降低仓位至6-7成，保留现金应对市场波动。</div></div></div>';
+    }
+
+    if (totalPnlPct < -10) {
+      html += '<div class="portfolio-advice-item sell">';
+      html += '<span class="advice-icon">🔴</span>';
+      html += '<div class="advice-text"><div class="advice-title">整体亏损超10%</div>';
+      html += '<div class="advice-detail">组合整体亏损较大，建议：1)检查持仓是否集中在单一行业 2)评估是否需要止损部分仓位 3)考虑定投摊低成本 4)等待市场情绪回暖后调整。</div></div></div>';
+    }
+
+    // 基于新闻热点的建议
+    if (this.data?.aiInsights?.hotSectors) {
+      const topSectors = this.data.aiInsights.hotSectors.slice(0, 3).map(s => s.name).join('、');
+      html += '<div class="portfolio-advice-item buy">';
+      html += '<span class="advice-icon">🔥</span>';
+      html += '<div class="advice-text"><div class="advice-title">热点板块关注</div>';
+      html += '<div class="advice-detail">当前市场热点板块：' + topSectors + '。可关注这些方向的配置机会，增配不超过总仓位30%的热点主题基金。</div></div></div>';
+    }
+
+    // 风险提示
+    html += '<div style="margin-top:12px;padding:12px;background:rgba(245,158,11,0.06);border-radius:8px;border:1px solid rgba(245,158,11,0.12);">';
+    html += '<div style="font-size:12px;color:var(--accent-orange);"><i class="fas fa-exclamation-triangle"></i> 风险提示</div>';
+    html += '<div style="font-size:12px;color:var(--text-tertiary);margin-top:4px;">以上分析基于AI模型生成，仅供参考，不构成投资建议。市场有风险，投资需谨慎。建议结合自身风险承受能力做出决策。</div></div>';
+
+    container.innerHTML = html;
   }
 };
 

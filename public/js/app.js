@@ -6,7 +6,7 @@ const App = {
   countdownSeconds: 300,
   remainingSeconds: 300,
   isRefreshing: false,
-  currentSection: 'dashboard',
+  currentSection: 'portfolio',
   portfolio: [],
 
   // DOM Cache
@@ -737,37 +737,153 @@ const App = {
     localStorage.setItem('investment_portfolio', JSON.stringify(this.portfolio));
   },
 
-  findFundByCode(code) {
-    if (!this.data || !this.data.topFunds) return null;
-    // 精确匹配 fund code
-    const exact = this.data.topFunds.find(f => f.code === code);
-    if (exact) return { ...exact, currentNav: parseFloat(exact.nav) };
+  // ============ 搜索 → 选择 → 添加 流程 ============
 
-    // 模糊匹配 fundTemplate 数据（从 server 端完整列表）
-    // 也检查所有全球市场指数
-    if (this.data.marketOverview) {
-      for (const [name, info] of Object.entries(this.data.marketOverview)) {
-        if (name.includes(code) || code.includes(name)) {
-          return { name, code: '--', currentNav: parseFloat(info.value), nav: info.value, isIndex: true, trend: info.trend };
-        }
-      }
+  /** 搜索基金/指数 */
+  async searchFunds() {
+    const input = document.getElementById('portfolioSearchInput');
+    const resultsEl = document.getElementById('portfolioSearchResults');
+    const q = input.value.trim();
+    if (!q) {
+      this.showToast('请输入基金名称、代码或指数名称', 'error');
+      return;
     }
-    return null;
+
+    resultsEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-tertiary);"><i class="fas fa-spinner fa-spin"></i> 搜索中...</div>';
+
+    try {
+      const resp = await fetch('/api/funds/search?q=' + encodeURIComponent(q));
+      const data = await resp.json();
+
+      if (!data.results || data.results.length === 0) {
+        resultsEl.innerHTML = `
+          <div class="card" style="margin-top:12px;padding:20px;text-align:center;color:var(--text-tertiary);">
+            <i class="fas fa-search-minus" style="font-size:32px;display:block;margin-bottom:8px;opacity:0.4;"></i>
+            未找到匹配"${q}"的产品
+            <p style="font-size:12px;margin-top:8px;">提示：试试输入基金 6 位代码（如 110022）或中文名称（如 易方达）</p>
+          </div>
+        `;
+        return;
+      }
+
+      resultsEl.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--text-tertiary);margin-bottom:8px;">找到 ' + data.results.length + ' 个匹配结果</div>';
+
+      data.results.forEach(r => {
+        const isIndex = r.isIndex || false;
+        const change = parseFloat(r.todayChange);
+        const changeColor = change >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+        const changeIcon = change >= 0 ? 'arrow-up' : 'arrow-down';
+
+        resultsEl.innerHTML += `
+          <div class="card search-result-item" onclick="App.selectFund('${r.code}', '${r.name.replace(/'/g, "\\'")}', '${r.nav}', '${r.type}', '${r.focus}', ${isIndex})"
+               style="padding:14px 18px;margin-bottom:8px;cursor:pointer;transition:all 0.2s;
+                      border:1px solid var(--border-color);"
+               onmouseover="this.style.borderColor='var(--accent-cyan)'"
+               onmouseout="this.style.borderColor='var(--border-color)'">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:40px;height:40px;border-radius:10px;
+                          background:${isIndex ? 'rgba(139,92,246,0.12)' : 'rgba(16,185,129,0.12)'};
+                          display:flex;align-items:center;justify-content:center;
+                          color:${isIndex ? 'var(--accent-purple)' : 'var(--accent-green)'};font-size:16px;">
+                <i class="fas fa-${isIndex ? 'chart-bar' : 'piggy-bank'}"></i>
+              </div>
+              <div style="flex:1;">
+                <div style="font-weight:600;font-size:14px;">${r.name}</div>
+                <div style="font-size:12px;color:var(--text-tertiary);">
+                  代码: ${r.code} · ${r.type} · ${r.focus}
+                  ${r.source === 'realtime' ? '<span style="color:var(--accent-green);margin-left:6px;"><i class="fas fa-circle" style="font-size:6px;"></i> 实时净值</span>' : '<span style="color:var(--accent-orange);margin-left:6px;"><i class="fas fa-circle" style="font-size:6px;"></i> 估算净值</span>'}
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:16px;font-weight:700;color:var(--text-primary);">${r.nav}</div>
+                <div style="font-size:12px;color:${changeColor};">
+                  <i class="fas fa-${changeIcon}"></i> ${change >= 0 ? '+' : ''}${r.todayChange}%
+                </div>
+              </div>
+              <div style="color:var(--accent-cyan);font-size:12px;">
+                选择 <i class="fas fa-chevron-right"></i>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      // 同时清空可能显示的 add step
+      document.getElementById('portfolioAddStep').style.display = 'none';
+
+    } catch (err) {
+      resultsEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--accent-red);">搜索失败，请重试</div>';
+    }
   },
 
-  addPortfolioItem() {
-    const codeInput = document.getElementById('portfolioCodeInput');
-    const priceInput = document.getElementById('portfolioPriceInput');
-    const sharesInput = document.getElementById('portfolioSharesInput');
+  /** 选择某个搜索结果 → 显示添加表单 */
+  selectFund(code, name, nav, type, focus, isIndex) {
+    document.getElementById('portfolioSearchResults').innerHTML = '';
+    document.getElementById('portfolioSearchStep').style.display = 'none';
 
-    const code = codeInput.value.trim();
+    const addStep = document.getElementById('portfolioAddStep');
+    const change = parseFloat(nav);
+    const isPositive = change >= 0;
+
+    addStep.style.display = 'block';
+    addStep.innerHTML = `
+      <div style="margin-top:8px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;
+                    padding:14px;background:rgba(16,185,129,0.05);border-radius:var(--radius-sm);
+                    border:1px solid rgba(16,185,129,0.12);">
+          <div style="width:44px;height:44px;border-radius:12px;
+                      background:${isIndex ? 'rgba(139,92,246,0.15)' : 'rgba(16,185,129,0.15)'};
+                      display:flex;align-items:center;justify-content:center;
+                      color:${isIndex ? 'var(--accent-purple)' : 'var(--accent-green)'};font-size:18px;">
+            <i class="fas fa-${isIndex ? 'chart-bar' : 'piggy-bank'}"></i>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:16px;">${name}</div>
+            <div style="font-size:13px;color:var(--text-tertiary);">代码: ${code} · ${type} · ${focus}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:12px;color:var(--text-tertiary);">最新净值</div>
+            <div style="font-size:20px;font-weight:700;color:var(--accent-cyan);">${nav}</div>
+          </div>
+        </div>
+
+        <div class="portfolio-add-form">
+          <div class="form-row">
+            <div class="form-group" style="flex:1;">
+              <label>买入净值/价格 (元)</label>
+              <input type="number" id="confirmPrice" value="${nav}" step="0.001" class="form-input">
+            </div>
+            <div class="form-group" style="flex:1;">
+              <label>持有份额/股数</label>
+              <input type="number" id="confirmShares" placeholder="如 1000" step="1" class="form-input">
+            </div>
+            <div class="form-group" style="flex:0 0 auto;">
+              <label>&nbsp;</label>
+              <button class="btn btn-primary" onclick="App.confirmAdd('${code}', '${name.replace(/'/g, "\\'")}', ${isIndex})">
+                <i class="fas fa-plus"></i> 确认添加
+              </button>
+            </div>
+            <div class="form-group" style="flex:0 0 auto;">
+              <label>&nbsp;</label>
+              <button class="btn" style="background:rgba(255,255,255,0.06);color:var(--text-secondary);border:1px solid var(--border-color);"
+                      onclick="App.cancelAdd()">
+                <i class="fas fa-times"></i> 重新搜索
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  /** 确认添加持仓 */
+  confirmAdd(code, name, isIndex) {
+    const priceInput = document.getElementById('confirmPrice');
+    const sharesInput = document.getElementById('confirmShares');
+
     const price = parseFloat(priceInput.value);
     const shares = parseFloat(sharesInput.value);
 
-    if (!code) {
-      this.showToast('请输入基金/股票代码', 'error');
-      return;
-    }
     if (!price || price <= 0) {
       this.showToast('请输入有效的买入价格', 'error');
       return;
@@ -778,37 +894,54 @@ const App = {
     }
 
     // 检查是否已添加
-    if (this.portfolio.some(p => p.code === code && p.purchasePrice === price)) {
-      this.showToast('该持仓已存在，请勿重复添加', 'error');
+    if (this.portfolio.some(p => p.code === code && Math.abs(p.purchasePrice - price) < 0.001)) {
+      this.showToast('该持仓已存在', 'error');
       return;
     }
-
-    // 查找匹配的基金信息
-    const matched = this.findFundByCode(code);
 
     this.portfolio.push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       code: code,
-      name: matched ? matched.name : code + '(未匹配)',
+      name: name,
       purchasePrice: price,
       shares: shares,
       addedAt: new Date().toISOString(),
-      matchedCode: matched ? matched.code : null,
-      isIndex: matched ? matched.isIndex : false,
+      isIndex: isIndex || false,
     });
 
     this.savePortfolio();
     this.renderPortfolio();
+    this.cancelAdd();
 
-    // 清空输入
-    codeInput.value = '';
-    priceInput.value = '';
-    sharesInput.value = '';
-
-    this.showToast('✅ ' + code + ' 已添加到投资组合', 'success');
-
-    // 滚动到组合列表
+    this.showToast('✅ ' + name + ' 已添加到投资组合', 'success');
     document.getElementById('section-portfolio').scrollIntoView({ behavior: 'smooth' });
+  },
+
+  /** 取消添加，回到搜索 */
+  cancelAdd() {
+    document.getElementById('portfolioAddStep').style.display = 'none';
+    document.getElementById('portfolioSearchStep').style.display = 'block';
+    document.getElementById('portfolioSearchResults').innerHTML = '';
+    document.getElementById('portfolioSearchInput').value = '';
+    document.getElementById('portfolioSearchInput').focus();
+  },
+
+  /** 向后兼容：从现有数据按代码查找（供渲染持仓使用） */
+  findFundByCode(code) {
+    // 搜索 topFunds
+    if (this.data?.topFunds) {
+      const exact = this.data.topFunds.find(f => f.code === code);
+      if (exact) return { ...exact, currentNav: parseFloat(exact.nav) };
+    }
+    // 搜索 marketOverview
+    if (this.data?.marketOverview) {
+      for (const [name, info] of Object.entries(this.data.marketOverview)) {
+        if (name.includes(code) || code.includes(name)) {
+          return { name, code: '--', currentNav: parseFloat(info.value), nav: info.value, isIndex: true, trend: info.trend };
+        }
+      }
+    }
+    return null;
   },
 
   removePortfolioItem(id) {

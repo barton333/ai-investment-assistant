@@ -669,6 +669,68 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// 基金搜索 API — 搜索全部 20 只基金 + A股指数
+app.get('/api/funds/search', (req, res) => {
+  const q = (req.query.q || '').trim().toLowerCase();
+  if (!q || q.length < 1) return res.json({ results: [] });
+
+  // 从 fundTemplates 搜索
+  const matchedFunds = fundTemplates
+    .filter(f => f.code.includes(q) || f.name.toLowerCase().includes(q) || f.focus.toLowerCase().includes(q))
+    .map(f => {
+      // 从缓存中查找实时净值
+      let nav = null;
+      let todayChange = null;
+      let navDate = null;
+      if (cachedData?.topFunds) {
+        const found = cachedData.topFunds.find(tf => tf.code === f.code);
+        if (found) {
+          nav = found.nav;
+          todayChange = found.todayChange;
+          navDate = found.navDate;
+        }
+      }
+      // 模拟降级
+      if (nav === null) {
+        const seed = parseInt(f.code.slice(-4), 16) || 1;
+        nav = (1.5 + (seed % 50) * 0.1).toFixed(4);
+        todayChange = ((seed % 9) * 0.5 - 1).toFixed(2);
+      }
+      return {
+        code: f.code,
+        name: f.name,
+        type: f.type,
+        focus: f.focus,
+        nav: nav,
+        todayChange: todayChange,
+        navDate: navDate || new Date().toISOString().slice(0, 10),
+        source: cachedData?.topFunds?.find(tf => tf.code === f.code) ? 'realtime' : 'estimated',
+      };
+    });
+
+  // 同时搜索 A 股指数
+  const matchedIndices = [];
+  if (cachedData?.marketOverview) {
+    for (const [name, info] of Object.entries(cachedData.marketOverview)) {
+      if (name.includes(q) && !['美元/人民币'].some(x => name.includes(x))) {
+        matchedIndices.push({
+          code: name,
+          name: name,
+          type: '指数',
+          focus: '市场指数',
+          nav: info.value,
+          todayChange: info.changePercent,
+          navDate: cachedData.timestamp?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+          source: info.source || 'realtime',
+          isIndex: true,
+        });
+      }
+    }
+  }
+
+  res.json({ results: [...matchedFunds, ...matchedIndices] });
+});
+
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 

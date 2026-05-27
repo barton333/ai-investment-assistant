@@ -752,18 +752,39 @@ const App = {
     resultsEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-tertiary);"><i class="fas fa-spinner fa-spin"></i> 搜索中...</div>';
 
     try {
-      const resp = await fetch('/api/funds/search?q=' + encodeURIComponent(q));
-      const data = await resp.json();
+      // 并行请求：数据库搜索 + 实时行情直查
+      const [dbResp, liveResp] = await Promise.allSettled([
+        fetch('/api/funds/search?q=' + encodeURIComponent(q)),
+        fetch('/api/funds/lookup?code=' + encodeURIComponent(q)),
+      ]);
 
-      if (!data.results || data.results.length === 0) {
+      const dbData = dbResp.status === 'fulfilled' ? await dbResp.value.json() : { results: [] };
+      const liveData = liveResp.status === 'fulfilled' ? await liveResp.value.json() : { results: [] };
+
+      // 合并结果，按 code 去重（实时数据优先）
+      const seen = new Set();
+      const merged = [];
+
+      // 实时结果优先
+      for (const r of (liveData.results || [])) {
+        const key = r.code || r.name;
+        if (!seen.has(key)) { seen.add(key); merged.push({ ...r, _source: '实时行情', _priority: 0 }); }
+      }
+      // 补充数据库结果
+      for (const r of (dbData.results || [])) {
+        const key = r.code || r.name;
+        if (!seen.has(key)) { seen.add(key); merged.push({ ...r, _source: '数据库', _priority: 1 }); }
+      }
+
+      if (merged.length === 0) {
         resultsEl.innerHTML = `
           <div class="card" style="margin-top:12px;padding:20px;text-align:center;color:var(--text-tertiary);">
             <i class="fas fa-search-minus" style="font-size:32px;display:block;margin-bottom:8px;opacity:0.4;"></i>
-            数据库中暂未收录 "<strong>${q}</strong>"
+            未找到 "<strong>${q}</strong>"，试试手动添加
           </div>
           <div class="card" style="margin-top:12px;padding:20px;border:1px dashed rgba(16,185,129,0.3);background:rgba(16,185,129,0.03);">
             <div style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--accent-green);">
-              <i class="fas fa-plus-circle"></i> 手动添加 — 输入产品信息
+              <i class="fas fa-plus-circle"></i> 手动添加
             </div>
             <div class="portfolio-add-form">
               <div class="form-row">
@@ -773,7 +794,7 @@ const App = {
                 </div>
                 <div class="form-group" style="flex:2;">
                   <label>产品名称 *</label>
-                  <input type="text" id="manualName" placeholder="如 中欧智能制造混合A" class="form-input">
+                  <input type="text" id="manualName" placeholder="如 上银中债5-10年国开行债券指数A" class="form-input">
                 </div>
                 <div class="form-group" style="flex:1;">
                   <label>买入价 * (元)</label>
@@ -792,16 +813,16 @@ const App = {
               </div>
             </div>
             <div style="margin-top:10px;font-size:12px;color:var(--text-tertiary);">
-              <i class="fas fa-info-circle"></i> 不会自动获取最新价，需等待系统后续匹配或手动更新。盈亏基于买入价跟踪。
+              <i class="fas fa-info-circle"></i> 手动添加后，持仓数据会保存到本地。代码若以后匹配到实时数据源，会自动更新最新价。
             </div>
           </div>
         `;
         return;
       }
 
-      resultsEl.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--text-tertiary);margin-bottom:8px;">找到 ' + data.results.length + ' 个匹配结果</div>';
+      resultsEl.innerHTML = '<div style="margin-top:12px;font-size:13px;color:var(--text-tertiary);margin-bottom:8px;">找到 ' + merged.length + ' 个结果（实时行情 ' + (liveData.results?.length || 0) + ' / 数据库 ' + (dbData.results?.length || 0) + '）</div>';
 
-      data.results.forEach(r => {
+      merged.forEach(r => {
         const isIndex = r.isIndex || false;
         const change = parseFloat(r.todayChange);
         const changeColor = change >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
@@ -831,7 +852,11 @@ const App = {
                 </div>
                 <div style="font-size:12px;color:var(--text-tertiary);">
                   ${r.code} · ${r.focus}
-                  ${r.source === 'realtime' ? '<span style="color:var(--accent-green);margin-left:6px;"><i class="fas fa-circle" style="font-size:6px;"></i> 实时</span>' : '<span style="color:var(--accent-orange);margin-left:6px;"><i class="fas fa-circle" style="font-size:6px;"></i> 估</span>'}
+                  ${r._source === '实时行情' || r.sourceLabel
+                    ? '<span style="color:var(--accent-green);margin-left:6px;"><i class="fas fa-bolt" style="font-size:9px;"></i> ' + (r.sourceLabel || '实时') + '</span>'
+                    : r.source === 'tiantian_realtime' || r.source === 'sina_realtime' || r.source === 'tencent_realtime'
+                      ? '<span style="color:var(--accent-green);margin-left:6px;"><i class="fas fa-bolt" style="font-size:9px;"></i> 实时</span>'
+                      : '<span style="color:var(--accent-orange);margin-left:6px;"><i class="fas fa-circle" style="font-size:6px;"></i> 估算</span>'}
                 </div>
               </div>
               <div style="text-align:right;">

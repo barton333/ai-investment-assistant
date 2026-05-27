@@ -7,6 +7,7 @@ const realtimeNewsProvider = require('./services/realtimeNewsProvider');
 const realtimeGlobalIndicesProvider = require('./services/realtimeGlobalIndicesProvider');
 const realtimeHotSectorsProvider = require('./services/realtimeHotSectorsProvider');
 const cache = require('./services/cacheManager');
+const { fetchText } = require('./services/fetcher');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -1025,6 +1026,154 @@ app.get('/api/funds/search', (req, res) => {
   });
 });
 
+// ============ 实时行情直查 API（不依赖数据库，动态查询任何代码） ============
+// 支持：A股股票、公募基金、港股、美股、期货、ETF
+app.get('/api/funds/lookup', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json({ results: [] });
+
+  const results = [];
+  const isNumeric = /^\d+$/.test(q);
+
+  try {
+    if (isNumeric && q.length === 6) {
+      // ── 6 位数字：同时查 A股 + 公募基金 ──
+      const [sinaStock, tencentStock, fundData] = await Promise.allSettled([
+        fetchText(`https://hq.sinajs.cn/list=sh${q},sz${q}`, { timeout: 8000 }),
+        fetchText(`http://qt.gtimg.cn/q=sh${q},sz${q}`, { timeout: 8000 }),
+        fetchText(`http://fundgz.1234567.com.cn/js/${q}.js`, { timeout: 8000 }),
+      ]);
+
+      // 解析新浪 A股
+      if (sinaStock.status === 'fulfilled' && sinaStock.value) {
+        const lines = sinaStock.value.split('\n');
+        for (const line of lines) {
+          if (!line || line === '') continue;
+          const match = line.match(/hq_str_(\w+)="([^"]+)"/);
+          if (!match || !match[2] || match[2] === '') continue;
+          const parts = match[2].split(',');
+          const codeRaw = match[1]; // sh600519 or sz000001
+          const name = parts[0] || '';
+          if (!name) continue;
+          const price = parseFloat(parts[3]) || parseFloat(parts[2]) || 0;
+          const prevClose = parseFloat(parts[2]) || price;
+          const change = price - prevClose;
+          const changePct = prevClose > 0 ? (change / prevClose * 100).toFixed(2) : '0.00';
+          const market = codeRaw.startsWith('sh') ? '上海' : '深圳';
+          results.push({
+            code: q, name, type: 'A股股票', focus: `${market}交易所`,
+            nav: price.toFixed(2), todayChange: change.toFixed(2), todayChangePct: changePct,
+            source: 'sina_realtime', market: 'A股股票', sourceLabel: `新浪实时 · ${market}`,
+          });
+        }
+      }
+
+      // 解析腾讯 A股（作为补充）
+      if (tencentStock.status === 'fulfilled' && tencentStock.value) {
+        const lines = tencentStock.value.split('\n');
+        for (const line of lines) {
+          if (!line || line.includes('=') === false) continue;
+          const parts = line.split('~');
+          if (parts.length < 5) continue;
+          const name = parts[1] || '';
+          const code = parts[2] || q;
+          if (!name || name === '') continue;
+          const price = parseFloat(parts[3]) || 0;
+          const prevClose = parseFloat(parts[4]) || price;
+          const change = price - prevClose;
+          const changePct = prevClose > 0 ? (change / prevClose * 100).toFixed(2) : '0.00';
+          // 避免重复
+          if (!results.some(r => r.code === code && r.source === 'sina_realtime')) {
+            results.push({
+              code, name, type: 'A股股票', focus: '实时行情',
+              nav: price.toFixed(2), todayChange: change.toFixed(2), todayChangePct: changePct,
+              source: 'tencent_realtime', market: 'A股股票', sourceLabel: '腾讯实时',
+            });
+          }
+        }
+      }
+
+      // 解析天天基金
+      if (fundData.status === 'fulfilled' && fundData.value) {
+        const jsonMatch = fundData.value.match(/\{.*\}/);
+        if (jsonMatch) {
+          try {
+            const f = JSON.parse(jsonMatch[0]);
+            if (f && f.fundcode && f.name) {
+              results.push({
+                code: f.fundcode, name: f.name, type: '公募基金', focus: f.fundtype || '基金',
+                nav: f.dwjz || '--', todayChange: f.jzzzl || '0.00', todayChangePct: f.jzzzl || '0.00',
+                navDate: f.jzrq || '', source: 'tiantian_realtime', market: 'A股基金',
+                sourceLabel: '天天基金实时净值',
+              });
+            }
+          } catch (e) { /* ignore parse errors */ }
+        }
+      }
+    }
+
+    // ── 港股 (5 位数字或以 hk 开头) ──
+    if ((isNumeric && q.length === 5) || q.startsWith('hk')) {
+      const hkCode = q.replace(/^hk/i, '');
+      const hkResp = await fetchText(`http://qt.gtimg.cn/q=hk${hkCode}`, { timeout: 8000 }).catch(() => null);
+      if (hkResp) {
+        const parts = hkResp.split('~');
+        if (parts.length > 5 && parts[1] && parts[1] !== '') {
+          const price = parseFloat(parts[3]) || 0;
+          const prevClose = parseFloat(parts[4]) || price;
+          const change = price - prevClose;
+          results.push({
+            code: hkCode, name: parts[1], type: '港股', focus: '香港交易所',
+            nav: price.toFixed(2), todayChange: change.toFixed(2),
+            todayChangePct: prevClose > 0 ? (change / prevClose * 100).toFixed(2) : '0.00',
+            source: 'tencent_realtime', market: '港股', sourceLabel: '腾讯实时港股',
+          });
+        }
+      }
+    }
+
+    // ── 美股 / 字母代码 ──
+    if (!isNumeric || q.length > 6) {
+      const usCode = q.toLowerCase();
+      const sinaResp = await fetchText(`https://hq.sinajs.cn/list=gb_${usCode}`, { timeout: 8000 }).catch(() => null);
+      if (sinaResp) {
+        const match = sinaResp.match(/hq_str_gb_\w+="([^"]+)"/);
+        if (match && match[1]) {
+          const parts = match[1].split(',');
+          const name = parts[0] || q;
+          const price = parseFloat(parts[1]) || 0;
+          const change = parseFloat(parts[2]) || 0;
+          const changePct = parseFloat(parts[3]) || 0;
+          if (name && price > 0) {
+            results.push({
+              code: q.toUpperCase(), name, type: '美股', focus: '全球市场',
+              nav: price.toFixed(2), todayChange: change.toFixed(2), todayChangePct: changePct.toFixed(2),
+              source: 'sina_realtime', market: '美股', sourceLabel: '新浪实时美股',
+            });
+          }
+        }
+      }
+    }
+
+    // ── 如果实时查询没结果，回退到数据库搜索 ──
+    if (results.length === 0) {
+      const dbEntry = allProducts.find(p => p.code === q);
+      if (dbEntry) {
+        results.push({
+          code: dbEntry.code, name: dbEntry.name, type: dbEntry.market || dbEntry.type,
+          focus: dbEntry.focus, nav: '--', todayChange: '--', todayChangePct: '--',
+          source: 'database', market: dbEntry.market || 'A股基金', sourceLabel: '数据库(无实时数据)',
+        });
+      }
+    }
+
+  } catch (err) {
+    console.error('Lookup error:', err.message);
+  }
+
+  res.json({ results, total: results.length, query: q });
+});
+
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -1039,6 +1188,7 @@ app.listen(PORT, () => {
   console.log(`  🌐 http://localhost:${PORT}`);
   console.log(`  📊 API: http://localhost:${PORT}/api/data`);
   console.log(`  🔍 Debug: http://localhost:${PORT}/api/debug`);
+  console.log(`  🔍 Lookup: http://localhost:${PORT}/api/funds/lookup?code=XXXXXX (实时查询任意代码)`);
   console.log(`  📡 A股指数: 新浪+腾讯+东方财富 (交叉验证)`);
   console.log(`  🌍 全球指数: 东方财富+新浪 (恒生/美股/日经/黄金/原油)`);
   console.log(`  💰 基金数据: 天天基金 (净值+全周期历史)`);

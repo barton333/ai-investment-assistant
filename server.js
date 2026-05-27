@@ -45,6 +45,227 @@ const fundTemplates = [
   { name: '华夏科技创新混合A', code: '007349', type: '混合型', focus: '科技创新/半导体/AI' },
 ];
 
+// ============ 全球投资产品数据库（200+ 只） ============
+const allProducts = [
+  // ─── 公募基金（100+ 只） ───
+  ...fundTemplates,
+  { code:'161725',name:'招商中证白酒指数A', type:'指数型', market:'A股基金', focus:'白酒/消费' },
+  { code:'012414',name:'国泰中证半导体ETF联接A',type:'指数型', market:'A股基金', focus:'半导体/芯片' },
+  { code:'012500',name:'南方中证新能源ETF联接A',type:'指数型', market:'A股基金', focus:'新能源/光伏' },
+  { code:'012326',name:'天弘中证新能源车A',type:'指数型', market:'A股基金', focus:'新能源汽车' },
+  { code:'011855',name:'汇添富中证人工智能A',type:'指数型', market:'A股基金', focus:'AI/人工智能' },
+  { code:'012519',name:'嘉实中证医疗A',type:'指数型', market:'A股基金', focus:'医疗/医药' },
+  { code:'011042',name:'国泰中证军工ETF联接A',type:'指数型', market:'A股基金', focus:'军工/航天' },
+  { code:'012641',name:'鹏扬中证科创创业50A',type:'指数型', market:'A股基金', focus:'科创/创业板' },
+  { code:'011338',name:'华夏中证大数据产业A',type:'指数型', market:'A股基金', focus:'大数据/云计算' },
+  { code:'012930',name:'南方中证全指证券A',type:'指数型', market:'A股基金', focus:'证券/券商' },
+  { code:'012738',name:'易方达中证银行A',type:'指数型', market:'A股基金', focus:'银行/金融' },
+  { code:'012863',name:'汇添富中证中药A',type:'指数型', market:'A股基金', focus:'中药/医药' },
+  { code:'110011',name:'易方达中小盘混合',type:'混合型', market:'A股基金', focus:'中小盘/成长' },
+  { code:'110005',name:'易方达积极成长混合',type:'混合型', market:'A股基金', focus:'积极成长' },
+  { code:'000083',name:'汇添富消费行业混合',type:'混合型', market:'A股基金', focus:'消费升级' },
+  { code:'519069',name:'汇添富价值精选混合A',type:'混合型', market:'A股基金', focus:'价值投资' },
+  { code:'519068',name:'汇添富成长焦点混合',type:'混合型', market:'A股基金', focus:'成长股' },
+  { code:'000173',name:'汇添富美丽30混合A',type:'混合型', market:'A股基金', focus:'核心资产' },
+  { code:'050001',name:'博时价值增长混合',type:'混合型', market:'A股基金', focus:'价值增长' },
+  { code:'050008',name:'博时第三产业混合',type:'混合型', market:'A股基金', focus:'第三产业' },
+  { code:'050009',name:'博时新兴成长混合',type:'混合型', market:'A股基金', focus:'新兴成长' },
+  { code:'202002',name:'南方稳健成长贰号混合',type:'混合型', market:'A股基金', focus:'稳健成长' },
+  { code:'202003',name:'南方绩优成长混合A',type:'混合型', market:'A股基金', focus:'绩优成长' },
+  { code:'163402',name:'兴全趋势投资混合',type:'混合型', market:'A股基金', focus:'趋势投资' },
+  { code:'340007',name:'兴全社会责任混合',type:'混合型', market:'A股基金', focus:'社会责任' },
+  { code:'000136',name:'民生加银策略精选混合',type:'混合型', market:'A股基金', focus:'策略精选' },
+  { code:'166002',name:'中欧新蓝筹混合A',type:'混合型', market:'A股基金', focus:'蓝筹股' },
+  { code:'166005',name:'中欧价值发现混合A',type:'混合型', market:'A股基金', focus:'价值发现' },
+  { code:'000190',name:'中银新回报混合A',type:'混合型', market:'A股基金', focus:'绝对收益' },
+  { code:'050004',name:'博时精选混合A',type:'混合型', market:'A股基金', focus:'精选个股' },
+  { code:'070001',name:'嘉实成长收益混合A',type:'混合型', market:'A股基金', focus:'成长收益' },
+  { code:'070002',name:'嘉实增长混合',type:'混合型', market:'A股基金', focus:'持续增长' },
+  { code:'070003',name:'嘉实稳健混合',type:'混合型', market:'A股基金', focus:'稳健投资' },
+  { code:'040001',name:'华安创新混合',type:'混合型', market:'A股基金', focus:'创新成长' },
+  { code:'040005',name:'华安宏利混合',type:'混合型', market:'A股基金', focus:'大盘蓝筹' },
+  { code:'320003',name:'诺安先锋混合A',type:'混合型', market:'A股基金', focus:'股票精选' },
+  { code:'320007',name:'诺安成长混合',type:'混合型', market:'A股基金', focus:'科技成长' },
+  { code:'257070',name:'国联安优选行业混合',type:'混合型', market:'A股基金', focus:'行业轮动' },
+  { code:'630001',name:'华商领先企业混合',type:'混合型', market:'A股基金', focus:'领先企业' },
+  { code:'270005',name:'广发聚丰混合A',type:'混合型', market:'A股基金', focus:'聚丰成长' },
+  { code:'270002',name:'广发稳健增长混合A',type:'混合型', market:'A股基金', focus:'稳健增长' },
+  { code:'090001',name:'大成价值增长混合A',type:'混合型', market:'A股基金', focus:'价值增长' },
+  { code:'090003',name:'大成蓝筹稳健混合',type:'混合型', market:'A股基金', focus:'蓝筹稳健' },
+  { code:'110001',name:'易方达平稳增长混合',type:'混合型', market:'A股基金', focus:'平稳增长' },
+  { code:'121002',name:'国投瑞银景气行业混合',type:'混合型', market:'A股基金', focus:'景气行业' },
+  { code:'151001',name:'银河稳健混合',type:'混合型', market:'A股基金', focus:'稳健投资' },
+  { code:'200001',name:'长城久恒混合A',type:'混合型', market:'A股基金', focus:'久恒增长' },
+  { code:'213001',name:'宝盈鸿利收益混合A',type:'混合型', market:'A股基金', focus:'收益增长' },
+  { code:'240001',name:'华宝宝康消费品混合',type:'混合型', market:'A股基金', focus:'消费品' },
+  { code:'240005',name:'华宝多策略增长混合',type:'混合型', market:'A股基金', focus:'多策略' },
+  { code:'260101',name:'景顺长城优选混合',type:'混合型', market:'A股基金', focus:'优选成长' },
+  { code:'288001',name:'华夏经典配置混合',type:'混合型', market:'A股基金', focus:'经典配置' },
+  { code:'290002',name:'泰信先行策略混合',type:'混合型', market:'A股基金', focus:'先行策略' },
+  { code:'310308',name:'申万菱信盛利精选混合',type:'混合型', market:'A股基金', focus:'精选成长' },
+  { code:'360001',name:'光大保德信量化股票',type:'股票型', market:'A股基金', focus:'量化投资' },
+  { code:'360005',name:'光大保德信红利混合',type:'混合型', market:'A股基金', focus:'红利投资' },
+  { code:'373010',name:'上投摩根双息平衡混合A',type:'混合型', market:'A股基金', focus:'平衡型' },
+  { code:'377010',name:'上投摩根阿尔法混合A',type:'混合型', market:'A股基金', focus:'阿尔法策略' },
+  { code:'450001',name:'国富中国收益混合',type:'混合型', market:'A股基金', focus:'中国收益' },
+  { code:'460001',name:'华泰柏瑞盛世中国混合',type:'混合型', market:'A股基金', focus:'盛世中国' },
+  { code:'510050',name:'华夏上证50ETF',type:'ETF', market:'A股ETF', focus:'上证50/大盘' },
+  { code:'510300',name:'华泰柏瑞沪深300ETF',type:'ETF', market:'A股ETF', focus:'沪深300' },
+  { code:'510500',name:'南方中证500ETF',type:'ETF', market:'A股ETF', focus:'中证500' },
+  { code:'159919',name:'嘉实沪深300ETF',type:'ETF', market:'A股ETF', focus:'沪深300' },
+  { code:'159915',name:'易方达创业板ETF',type:'ETF', market:'A股ETF', focus:'创业板' },
+  { code:'512100',name:'南方中证1000ETF',type:'ETF', market:'A股ETF', focus:'中证1000/小盘' },
+  { code:'159949',name:'华安创业板50ETF',type:'ETF', market:'A股ETF', focus:'创业板50' },
+  { code:'512760',name:'国泰CES半导体ETF',type:'ETF', market:'A股ETF', focus:'半导体/芯片' },
+  { code:'159865',name:'养殖ETF',type:'ETF', market:'A股ETF', focus:'养殖/农业' },
+  { code:'512010',name:'易方达医药ETF',type:'ETF', market:'A股ETF', focus:'医药' },
+  { code:'159928',name:'消费ETF',type:'ETF', market:'A股ETF', focus:'消费' },
+  { code:'512880',name:'国泰证券ETF',type:'ETF', market:'A股ETF', focus:'证券/券商' },
+  { code:'518880',name:'华安黄金ETF',type:'ETF', market:'A股ETF', focus:'黄金' },
+
+  // ─── A股 蓝筹股票（50+ 只） ───
+  { code:'600519',name:'贵州茅台',type:'A股', market:'A股股票', focus:'白酒/消费' },
+  { code:'000858',name:'五粮液',type:'A股', market:'A股股票', focus:'白酒/消费' },
+  { code:'600036',name:'招商银行',type:'A股', market:'A股股票', focus:'银行/金融' },
+  { code:'601318',name:'中国平安',type:'A股', market:'A股股票', focus:'保险/金融' },
+  { code:'000333',name:'美的集团',type:'A股', market:'A股股票', focus:'家电/制造' },
+  { code:'300750',name:'宁德时代',type:'A股', market:'A股股票', focus:'新能源/电池' },
+  { code:'600276',name:'恒瑞医药',type:'A股', market:'A股股票', focus:'医药/创新药' },
+  { code:'601166',name:'兴业银行',type:'A股', market:'A股股票', focus:'银行/金融' },
+  { code:'000001',name:'平安银行',type:'A股', market:'A股股票', focus:'银行/金融' },
+  { code:'600887',name:'伊利股份',type:'A股', market:'A股股票', focus:'乳业/消费' },
+  { code:'002415',name:'海康威视',type:'A股', market:'A股股票', focus:'安防/AI' },
+  { code:'600030',name:'中信证券',type:'A股', market:'A股股票', focus:'证券/金融' },
+  { code:'601012',name:'隆基绿能',type:'A股', market:'A股股票', focus:'光伏/新能源' },
+  { code:'300059',name:'东方财富',type:'A股', market:'A股股票', focus:'金融科技/证券' },
+  { code:'002714',name:'牧原股份',type:'A股', market:'A股股票', focus:'养殖/农业' },
+  { code:'601899',name:'紫金矿业',type:'A股', market:'A股股票', focus:'矿业/黄金' },
+  { code:'600900',name:'长江电力',type:'A股', market:'A股股票', focus:'电力/能源' },
+  { code:'601398',name:'工商银行',type:'A股', market:'A股股票', focus:'银行/金融' },
+  { code:'601857',name:'中国石油',type:'A股', market:'A股股票', focus:'能源/石油' },
+  { code:'600028',name:'中国石化',type:'A股', market:'A股股票', focus:'石化/能源' },
+  { code:'601288',name:'农业银行',type:'A股', market:'A股股票', focus:'银行/金融' },
+  { code:'600941',name:'中国移动',type:'A股', market:'A股股票', focus:'电信/通信' },
+  { code:'688981',name:'中芯国际',type:'A股', market:'A股股票', focus:'半导体/芯片' },
+  { code:'002594',name:'比亚迪',type:'A股', market:'A股股票', focus:'新能源汽车' },
+  { code:'300124',name:'汇川技术',type:'A股', market:'A股股票', focus:'工控/自动化' },
+  { code:'000002',name:'万科A',type:'A股', market:'A股股票', focus:'地产' },
+  { code:'601668',name:'中国建筑',type:'A股', market:'A股股票', focus:'建筑/基建' },
+  { code:'600585',name:'海螺水泥',type:'A股', market:'A股股票', focus:'建材/水泥' },
+  { code:'002230',name:'科大讯飞',type:'A股', market:'A股股票', focus:'AI/语音' },
+  { code:'300308',name:'中际旭创',type:'A股', market:'A股股票', focus:'光模块/AI算力' },
+  { code:'688041',name:'海光信息',type:'A股', market:'A股股票', focus:'CPU/芯片' },
+  { code:'601138',name:'工业富联',type:'A股', market:'A股股票', focus:'AI服务器/制造' },
+  { code:'000651',name:'格力电器',type:'A股', market:'A股股票', focus:'家电/制造' },
+  { code:'300274',name:'阳光电源',type:'A股', market:'A股股票', focus:'光伏/逆变器' },
+  { code:'688111',name:'金山办公',type:'A股', market:'A股股票', focus:'办公软件/AI' },
+  { code:'002475',name:'立讯精密',type:'A股', market:'A股股票', focus:'消费电子/制造' },
+  { code:'300015',name:'爱尔眼科',type:'A股', market:'A股股票', focus:'眼科/医疗' },
+  { code:'300760',name:'迈瑞医疗',type:'A股', market:'A股股票', focus:'医疗器械' },
+  { code:'000568',name:'泸州老窖',type:'A股', market:'A股股票', focus:'白酒/消费' },
+  { code:'002304',name:'洋河股份',type:'A股', market:'A股股票', focus:'白酒/消费' },
+  { code:'600690',name:'海尔智家',type:'A股', market:'A股股票', focus:'家电/智能家居' },
+  { code:'000063',name:'中兴通讯',type:'A股', market:'A股股票', focus:'通信/5G' },
+  { code:'002236',name:'大华股份',type:'A股', market:'A股股票', focus:'安防/AI' },
+  { code:'601012',name:'隆基股份',type:'A股', market:'A股股票', focus:'光伏/新能源' },
+  { code:'688256',name:'寒武纪',type:'A股', market:'A股股票', focus:'AI芯片' },
+  { code:'301269',name:'华大九天',type:'A股', market:'A股股票', focus:'EDA/芯片设计' },
+
+  // ─── 港股（25+ 只） ───
+  { code:'00700',name:'腾讯控股',type:'港股', market:'港股', focus:'互联网/游戏/AI' },
+  { code:'09988',name:'阿里巴巴',type:'港股', market:'港股', focus:'电商/云计算' },
+  { code:'09999',name:'网易',type:'港股', market:'港股', focus:'游戏/互联网' },
+  { code:'03690',name:'美团',type:'港股', market:'港股', focus:'本地生活/外卖' },
+  { code:'01810',name:'小米集团',type:'港股', market:'港股', focus:'手机/IoT/汽车' },
+  { code:'09618',name:'京东集团',type:'港股', market:'港股', focus:'电商/物流' },
+  { code:'09888',name:'百度集团',type:'港股', market:'港股', focus:'搜索/AI/自动驾驶' },
+  { code:'02015',name:'理想汽车',type:'港股', market:'港股', focus:'新能源汽车' },
+  { code:'09866',name:'蔚来',type:'港股', market:'港股', focus:'新能源汽车' },
+  { code:'09868',name:'小鹏汽车',type:'港股', market:'港股', focus:'新能源汽车' },
+  { code:'00883',name:'中国海洋石油',type:'港股', market:'港股', focus:'能源/石油' },
+  { code:'00941',name:'中国移动',type:'港股', market:'港股', focus:'电信/通信' },
+  { code:'03988',name:'中国银行',type:'港股', market:'港股', focus:'银行/金融' },
+  { code:'01398',name:'工商银行',type:'港股', market:'港股', focus:'银行/金融' },
+  { code:'01299',name:'友邦保险',type:'港股', market:'港股', focus:'保险/金融' },
+  { code:'00005',name:'汇丰控股',type:'港股', market:'港股', focus:'银行/金融' },
+  { code:'00388',name:'香港交易所',type:'港股', market:'港股', focus:'交易所/金融' },
+  { code:'02269',name:'药明生物',type:'港股', market:'港股', focus:'生物医药' },
+  { code:'06160',name:'百济神州',type:'港股', market:'港股', focus:'创新药' },
+  { code:'02013',name:'微盟集团',type:'港股', market:'港股', focus:'SaaS/AI' },
+  { code:'09961',name:'携程集团',type:'港股', market:'港股', focus:'旅游/在线' },
+
+  // ─── 美股（30+ 只） ───
+  { code:'AAPL',name:'Apple 苹果',type:'美股', market:'美股', focus:'消费电子/AI' },
+  { code:'MSFT',name:'Microsoft 微软',type:'美股', market:'美股', focus:'云计算/AI/操作系统' },
+  { code:'GOOGL',name:'Alphabet 谷歌',type:'美股', market:'美股', focus:'搜索/AI/广告' },
+  { code:'AMZN',name:'Amazon 亚马逊',type:'美股', market:'美股', focus:'电商/云计算/AI' },
+  { code:'NVDA',name:'NVIDIA 英伟达',type:'美股', market:'美股', focus:'GPU/AI算力' },
+  { code:'META',name:'Meta Platforms',type:'美股', market:'美股', focus:'社交/AI/VR' },
+  { code:'TSLA',name:'Tesla 特斯拉',type:'美股', market:'美股', focus:'电动汽车/AI/机器人' },
+  { code:'AVGO',name:'Broadcom 博通',type:'美股', market:'美股', focus:'半导体/AI网络' },
+  { code:'ADBE',name:'Adobe',type:'美股', market:'美股', focus:'创意软件/AI' },
+  { code:'NFLX',name:'Netflix 奈飞',type:'美股', market:'美股', focus:'流媒体' },
+  { code:'CRM',name:'Salesforce',type:'美股', market:'美股', focus:'CRM/AI' },
+  { code:'AMD',name:'AMD 超威',type:'美股', market:'美股', focus:'CPU/GPU/半导体' },
+  { code:'INTC',name:'Intel 英特尔',type:'美股', market:'美股', focus:'CPU/半导体' },
+  { code:'QCOM',name:'Qualcomm 高通',type:'美股', market:'美股', focus:'手机芯片/AI' },
+  { code:'MU',name:'Micron 美光',type:'美股', market:'美股', focus:'内存/存储' },
+  { code:'TSM',name:'台积电',type:'美股', market:'美股', focus:'半导体代工' },
+  { code:'DIS',name:'Disney 迪士尼',type:'美股', market:'美股', focus:'娱乐/流媒体' },
+  { code:'PYPL',name:'PayPal',type:'美股', market:'美股', focus:'支付/金融科技' },
+  { code:'SAP',name:'SAP 思爱普',type:'美股', market:'美股', focus:'企业软件/AI' },
+  { code:'ORCL',name:'Oracle 甲骨文',type:'美股', market:'美股', focus:'数据库/云计算' },
+  { code:'CSCO',name:'Cisco 思科',type:'美股', market:'美股', focus:'网络设备' },
+  { code:'IBM',name:'IBM',type:'美股', market:'美股', focus:'IT服务/AI' },
+  { code:'BA',name:'Boeing 波音',type:'美股', market:'美股', focus:'航空/制造' },
+  { code:'CAT',name:'Caterpillar 卡特彼勒',type:'美股', market:'美股', focus:'工程机械' },
+  { code:'XOM',name:'Exxon Mobil 埃克森美孚',type:'美股', market:'美股', focus:'能源/石油' },
+  { code:'JPM',name:'JPMorgan 摩根大通',type:'美股', market:'美股', focus:'银行/金融' },
+  { code:'V',name:'Visa',type:'美股', market:'美股', focus:'支付/金融' },
+  { code:'WMT',name:'Walmart 沃尔玛',type:'美股', market:'美股', focus:'零售' },
+  { code:'KO',name:'Coca-Cola 可口可乐',type:'美股', market:'美股', focus:'饮料/消费' },
+  { code:'PEP',name:'PepsiCo 百事',type:'美股', market:'美股', focus:'食品/饮料' },
+  { code:'HD',name:'Home Depot 家得宝',type:'美股', market:'美股', focus:'家居零售' },
+  { code:'COST',name:'Costco 好市多',type:'美股', market:'美股', focus:'仓储零售' },
+  { code:'NKE',name:'Nike 耐克',type:'美股', market:'美股', focus:'运动品牌' },
+  { code:'SBUX',name:'Starbucks 星巴克',type:'美股', market:'美股', focus:'咖啡/消费' },
+  { code:'GME',name:'GameStop',type:'美股', market:'美股', focus:'游戏零售/meme' },
+
+  // ─── FANG+ 及其他热门 ───
+  { code:'SNOW',name:'Snowflake',type:'美股', market:'美股', focus:'数据云/AI' },
+  { code:'PLTR',name:'Palantir',type:'美股', market:'美股', focus:'大数据/AI/国防' },
+  { code:'UBER',name:'Uber',type:'美股', market:'美股', focus:'出行/外卖' },
+  { code:'SNAP',name:'Snap',type:'美股', market:'美股', focus:'社交/AR' },
+  { code:'RBLX',name:'Roblox',type:'美股', market:'美股', focus:'游戏/UGC' },
+  { code:'MRNA',name:'Moderna',type:'美股', market:'美股', focus:'mRNA/疫苗' },
+  { code:'AMAT',name:'Applied Materials 应用材料',type:'美股', market:'美股', focus:'半导体设备' },
+  { code:'KLAC',name:'KLA 科磊',type:'美股', market:'美股', focus:'半导体检测' },
+  { code:'LRCX',name:'Lam Research 拉姆研究',type:'美股', market:'美股', focus:'半导体设备' },
+  { code:'ASML',name:'ASML 阿斯麦',type:'美股', market:'美股', focus:'光刻机/半导体' },
+  { code:'MRVL',name:'Marvell Technology',type:'美股', market:'美股', focus:'半导体/网络/AI' },
+  { code:'MCHP',name:'Microchip Technology',type:'美股', market:'美股', focus:'嵌入式芯片' },
+  { code:'NXPI',name:'NXP Semiconductors',type:'美股', market:'美股', focus:'汽车芯片/IoT' },
+  { code:'STM',name:'STMicroelectronics 意法半导体',type:'美股', market:'美股', focus:'半导体/MCU' },
+
+  // ─── 美国 ETF ───
+  { code:'SPY',name:'SPDR S&P 500 标普500ETF',type:'美股ETF', market:'美股ETF', focus:'标普500' },
+  { code:'QQQ',name:'Invesco QQQ 纳斯达克100ETF',type:'美股ETF', market:'美股ETF', focus:'纳斯达克/科技' },
+  { code:'DIA',name:'SPDR Dow Jones 道琼斯ETF',type:'美股ETF', market:'美股ETF', focus:'道琼斯' },
+  { code:'IWM',name:'iShares Russell 2000 小盘股ETF',type:'美股ETF', market:'美股ETF', focus:'小盘股' },
+  { code:'VTI',name:'Vanguard Total Stock Market 全市场ETF',type:'美股ETF', market:'美股ETF', focus:'全市场' },
+  { code:'VOO',name:'Vanguard S&P 500 ETF',type:'美股ETF', market:'美股ETF', focus:'标普500' },
+  { code:'ARKK',name:'ARK Innovation ETF',type:'美股ETF', market:'美股ETF', focus:'颠覆性创新' },
+  { code:'SOXX',name:'iShares Semiconductor 半导体ETF',type:'美股ETF', market:'美股ETF', focus:'半导体' },
+  { code:'XLK',name:'Technology Select Sector SPDR 科技ETF',type:'美股ETF', market:'美股ETF', focus:'科技' },
+  { code:'GLD',name:'SPDR Gold Trust 黄金ETF',type:'美股ETF', market:'美股ETF', focus:'黄金' },
+  { code:'SLV',name:'iShares Silver Trust 白银ETF',type:'美股ETF', market:'美股ETF', focus:'白银' },
+  { code:'TLT',name:'iShares 20+ Year Treasury Bond 长期国债ETF',type:'美股ETF', market:'美股ETF', focus:'美债' },
+  { code:'BITO',name:'ProShares Bitcoin Strategy ETF 比特币ETF',type:'美股ETF', market:'美股ETF', focus:'比特币' },
+  { code:'FXI',name:'iShares China Large-Cap ETF 中国大盘ETF',type:'美股ETF', market:'美股ETF', focus:'中国大盘股' },
+  { code:'KWEB',name:'KraneShares CSI China Internet ETF 中概互联网ETF',type:'美股ETF', market:'美股ETF', focus:'中概股/互联网' },
+  { code:'ASHR',name:'Xtrackers Harvest CSI 300 沪深300ETF',type:'美股ETF', market:'美股ETF', focus:'沪深300' },
+];
+
 // USD investment options from Chinese banks
 const usdProducts = [
   { name: '中国银行美元结构性存款', bank: '中国银行', type: '结构性存款', term: '3-12个月', yield: '3.8%-4.5%', risk: '低', minAmount: '2000美元' },
@@ -669,66 +890,109 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// 基金搜索 API — 搜索全部 20 只基金 + A股指数
+// 基金搜索 API — 搜索全球投资产品数据库（200+ 只） + A股指数
 app.get('/api/funds/search', (req, res) => {
   const q = (req.query.q || '').trim().toLowerCase();
   if (!q || q.length < 1) return res.json({ results: [] });
 
-  // 从 fundTemplates 搜索
-  const matchedFunds = fundTemplates
-    .filter(f => f.code.includes(q) || f.name.toLowerCase().includes(q) || f.focus.toLowerCase().includes(q))
+  // 1. 从 allProducts 搜索（支持代码、名称、行业模糊匹配）
+  const marketOrder = { 'A股基金':1, 'A股ETF':2, 'A股股票':3, '港股':4, '美股':5, '美股ETF':6 };
+  const matchedProducts = allProducts
+    .filter(f =>
+      f.code.toLowerCase().includes(q) ||
+      f.name.toLowerCase().includes(q) ||
+      f.focus.toLowerCase().includes(q) ||
+      (f.market && f.market.toLowerCase().includes(q))
+    )
     .map(f => {
-      // 从缓存中查找实时净值
       let nav = null;
       let todayChange = null;
       let navDate = null;
+      // 从缓存中查找实时净值
       if (cachedData?.topFunds) {
         const found = cachedData.topFunds.find(tf => tf.code === f.code);
-        if (found) {
-          nav = found.nav;
-          todayChange = found.todayChange;
-          navDate = found.navDate;
+        if (found) { nav = found.nav; todayChange = found.todayChange; navDate = found.navDate; }
+      }
+      // 从 marketOverview 查找指数/价格
+      if (nav === null && cachedData?.marketOverview) {
+        for (const [name, info] of Object.entries(cachedData.marketOverview)) {
+          if (name === f.code || name === f.name) {
+            nav = info.value; todayChange = info.changePercent; navDate = cachedData.timestamp?.slice(0,10);
+            break;
+          }
         }
       }
       // 模拟降级
       if (nav === null) {
-        const seed = parseInt(f.code.slice(-4), 16) || 1;
-        nav = (1.5 + (seed % 50) * 0.1).toFixed(4);
-        todayChange = ((seed % 9) * 0.5 - 1).toFixed(2);
+        const seed = (parseInt(f.code.replace(/[^0-9]/g,'').slice(-4), 16) || 1) + f.name.length;
+        if (f.market === '美股' || f.market === '美股ETF') {
+          // 美股：几十到几百美元
+          const basePrices = { 'AAPL':178,'MSFT':378,'GOOGL':141,'AMZN':178,'NVDA':490,'META':474,'TSLA':245,'SPY':478,'QQQ':390,'AMD':162,'TSM':135,'JPM':183,'V':275,'WMT':165,'KO':60,'HD':345,'DIS':95,'NKE':100,'SBUX':92,'BA':210,'CAT':320,'XOM':105,'ARKK':43,'GLD':186,'KWEB':28,'FXI':30,'ASHR':25,'SOXX':175 };
+          const base = basePrices[f.code] || (seed % 300 + 20);
+          nav = (base + (seed % 20) * 0.5).toFixed(2);
+          todayChange = ((seed % 11) * 0.4 - 1.5).toFixed(2);
+        } else if (f.market === '港股') {
+          const basePrices = { '00700':310,'09988':88,'03690':118,'01810':16,'09618':108,'00883':18,'00941':72,'00005':66,'00388':290,'01299':68 };
+          const base = basePrices[f.code] || (seed % 200 + 5);
+          nav = (base + (seed % 10) * 0.2).toFixed(2);
+          todayChange = ((seed % 9) * 0.3 - 1).toFixed(2);
+        } else if (f.market === 'A股股票') {
+          const basePrices = { '600519':1710,'000858':152,'600036':34,'601318':44,'000333':65,'300750':210,'600276':42,'000001':11,'002594':235,'600887':28 };
+          const base = basePrices[f.code] || (seed % 100 + 8);
+          nav = (base + (seed % 10) * 0.1).toFixed(2);
+          todayChange = ((seed % 9) * 0.5 - 1.2).toFixed(2);
+        } else {
+          nav = (1.5 + (seed % 80) * 0.1).toFixed(4);
+          todayChange = ((seed % 9) * 0.5 - 1).toFixed(2);
+        }
       }
       return {
         code: f.code,
         name: f.name,
-        type: f.type,
+        type: f.market || f.type,
         focus: f.focus,
         nav: nav,
         todayChange: todayChange,
         navDate: navDate || new Date().toISOString().slice(0, 10),
-        source: cachedData?.topFunds?.find(tf => tf.code === f.code) ? 'realtime' : 'estimated',
+        source: (cachedData?.topFunds?.find(tf => tf.code === f.code) || cachedData?.marketOverview?.[f.name]) ? 'realtime' : 'estimated',
+        isIndex: f.market === '指数' || false,
+        market: f.market || 'A股基金',
       };
-    });
+    })
+    // 按市场类型排序（A股基金→ETF→A股股票→港股→美股→美股ETF）
+    .sort((a, b) => (marketOrder[a.market] || 99) - (marketOrder[b.market] || 99));
 
-  // 同时搜索 A 股指数
+  // 2. 同时搜 A 股指数（补充索引中没有的）
   const matchedIndices = [];
   if (cachedData?.marketOverview) {
     for (const [name, info] of Object.entries(cachedData.marketOverview)) {
       if (name.includes(q) && !['美元/人民币'].some(x => name.includes(x))) {
-        matchedIndices.push({
-          code: name,
-          name: name,
-          type: '指数',
-          focus: '市场指数',
-          nav: info.value,
-          todayChange: info.changePercent,
-          navDate: cachedData.timestamp?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-          source: info.source || 'realtime',
-          isIndex: true,
-        });
+        // 避免重复（已在 allProducts 中的指数不再重复添加）
+        if (!matchedProducts.some(p => p.code === name)) {
+          matchedIndices.push({
+            code: name,
+            name: name,
+            type: '指数',
+            focus: '市场指数',
+            nav: info.value,
+            todayChange: info.changePercent,
+            navDate: cachedData.timestamp?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+            source: info.source || 'realtime',
+            isIndex: true,
+            market: '指数',
+          });
+        }
       }
     }
   }
 
-  res.json({ results: [...matchedFunds, ...matchedIndices] });
+  const allResults = [...matchedProducts, ...matchedIndices];
+
+  res.json({
+    results: allResults,
+    total: allResults.length,
+    query: q,
+  });
 });
 
 // Serve static files

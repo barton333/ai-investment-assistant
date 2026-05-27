@@ -788,10 +788,17 @@ const App = {
                 <i class="fas fa-${isIndex ? 'chart-bar' : 'piggy-bank'}"></i>
               </div>
               <div style="flex:1;">
-                <div style="font-weight:600;font-size:14px;">${r.name}</div>
+                <div style="font-weight:600;font-size:14px;">
+                  ${r.name}
+                  <span class="market-badge" style="font-size:10px;padding:1px 7px;border-radius:8px;margin-left:6px;font-weight:500;
+                        background:${r.market === 'A股基金' ? 'rgba(16,185,129,0.12)' : r.market === 'A股ETF' ? 'rgba(6,182,212,0.12)' : r.market === 'A股股票' ? 'rgba(59,130,246,0.12)' : r.market === '港股' ? 'rgba(139,92,246,0.12)' : r.market === '美股' ? 'rgba(245,158,11,0.12)' : r.market === '美股ETF' ? 'rgba(236,72,153,0.12)' : r.market === '指数' ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.06)'};
+                        color:${r.market === 'A股基金' ? 'var(--accent-green)' : r.market === 'A股ETF' ? 'var(--accent-cyan)' : r.market === 'A股股票' ? 'var(--accent-blue)' : r.market === '港股' ? 'var(--accent-purple)' : r.market === '美股' ? 'var(--accent-orange)' : r.market === '美股ETF' ? 'var(--accent-red)' : 'var(--text-tertiary)'}">
+                    ${r.market || '基金'}
+                  </span>
+                </div>
                 <div style="font-size:12px;color:var(--text-tertiary);">
-                  代码: ${r.code} · ${r.type} · ${r.focus}
-                  ${r.source === 'realtime' ? '<span style="color:var(--accent-green);margin-left:6px;"><i class="fas fa-circle" style="font-size:6px;"></i> 实时净值</span>' : '<span style="color:var(--accent-orange);margin-left:6px;"><i class="fas fa-circle" style="font-size:6px;"></i> 估算净值</span>'}
+                  ${r.code} · ${r.focus}
+                  ${r.source === 'realtime' ? '<span style="color:var(--accent-green);margin-left:6px;"><i class="fas fa-circle" style="font-size:6px;"></i> 实时</span>' : '<span style="color:var(--accent-orange);margin-left:6px;"><i class="fas fa-circle" style="font-size:6px;"></i> 估</span>'}
                 </div>
               </div>
               <div style="text-align:right;">

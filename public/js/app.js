@@ -1,4 +1,22 @@
 // ============ Investment Assistant - Frontend Application ============
+// XSS protection: auto-escape HTML in template interpolations
+const escapeHtml = (str) => {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+const safeHtml = (strings, ...values) => {
+  let result = strings[0];
+  for (let i = 0; i < values.length; i++) {
+    result += escapeHtml(values[i]) + strings[i + 1];
+  }
+  return result;
+};
+
 const App = {
   data: null,
   fetchTimer: null,
@@ -224,7 +242,7 @@ const App = {
       const badgeClass = isCrossValidated ? 'badge-green' : isRealtime ? 'badge-blue' : 'badge-gray';
       const pct = parseFloat(info.changePercent) || 0;
       const barWidth = Math.min(100, Math.abs(pct) * 10);
-      return `
+      return safeHtml`
         <div class="card market-card fade-in">
           <div class="market-badge ${badgeClass}">${badgeLabel}</div>
           <div class="index-name">${name}</div>
@@ -260,7 +278,7 @@ const App = {
       const badgeClass = 'badge-blue';
       const pct = parseFloat(info.changePercent) || 0;
       const barWidth = Math.min(100, Math.abs(pct) * 10);
-      return `
+      return safeHtml`
         <div class="card market-card fade-in">
           <div class="market-badge ${badgeClass}">${badgeLabel}</div>
           <div class="index-name">${name}</div>
@@ -287,7 +305,7 @@ const App = {
       const fundBadge = isRealtime ? '<span class="fund-source-badge">实时净值</span>' : '';
       const navDateInfo = fund.navDate ? `<span style="font-size:11px;color:var(--text-tertiary);margin-left:6px;">${fund.navDate}</span>` : '';
       
-      return `
+      return safeHtml`
         <div class="card fund-card fade-in stagger-${i+1}" onclick="App.openFundDetail(${i})">
           <div class="fund-rank ${rankClass}">${fund.rank}</div>
           <div class="fund-body">
@@ -342,7 +360,7 @@ const App = {
     const container = document.getElementById('aiAnalysis');
     if (!container || !this.data.topFunds) return;
 
-    container.innerHTML = this.data.topFunds.map((fund, i) => `
+    container.innerHTML = this.data.topFunds.map((fund, i) => safeHtml`
       <div class="card ai-analysis fade-in stagger-${i+1}" style="margin-bottom:12px;">
         <div class="ai-header">
           <i class="fas fa-robot" style="color:var(--accent-cyan);font-size:16px;"></i>
@@ -375,7 +393,7 @@ const App = {
       const impactClass = news.impact.includes('利好') ? '利好' : news.impact.includes('利空') ? '利空' : news.impact.includes('中性') ? '中性' : '中性';
       const highlightClass = news.impact.includes('利好') && i < 2 ? 'news-highlight' : news.impact.includes('利空') ? 'news-warning' : '';
       
-      return `
+      return safeHtml`
         <div class="card news-card fade-in stagger-${Math.min(i+1, 5)} ${highlightClass}"
              onclick="App.openNewsDetail(${i})" style="cursor:pointer;">
           <div class="news-header">
@@ -408,7 +426,7 @@ const App = {
     const container = document.getElementById('investmentAdvice');
     if (!container || !this.data.investmentAdvice) return;
 
-    container.innerHTML = this.data.investmentAdvice.map((advice, i) => `
+    container.innerHTML = this.data.investmentAdvice.map((advice, i) => safeHtml`
       <div class="card advice-card fade-in stagger-${i+1}">
         <div class="advice-type-bar" style="background:${advice.color};"></div>
         <div class="advice-title" style="padding-left:8px;">
@@ -436,7 +454,7 @@ const App = {
 
     container.innerHTML = this.data.usdProducts.map((p, i) => {
       const riskClass = p.risk.includes('低') || p.risk.includes('极') ? 'risk-low' : p.risk.includes('中') && !p.risk.includes('低') ? 'risk-mid' : 'risk-high';
-      return `
+      return safeHtml`
         <div class="card usd-card fade-in stagger-${i+1}">
           <div class="usd-bank"><i class="fas fa-university"></i> ${p.bank}</div>
           <div class="usd-name">${p.name}</div>
@@ -461,7 +479,7 @@ const App = {
     const sentClass = insights.marketSentiment.includes('乐观') || insights.marketSentiment.includes('偏多') 
       ? 'positive' : insights.marketSentiment.includes('谨慎') ? 'neutral' : 'negative';
 
-    container.innerHTML = `
+    container.innerHTML = safeHtml`
       <div class="card insight-card fade-in">
         <div class="insight-header">
           <i class="fas fa-brain" style="font-size:24px;color:var(--accent-cyan);"></i>
@@ -538,7 +556,7 @@ const App = {
 
     const items = this.data.globalNews.slice(0, 8).map((news, i) => {
       const dotColor = news.impact.includes('利好') ? 'green' : news.impact.includes('利空') ? 'red' : 'orange';
-      return `
+      return safeHtml`
         <span class="ticker-item" onclick="App.openNewsDetail(${i})" title="点击查看详情">
           <span class="ticker-dot ${dotColor}"></span>
           ${news.topic}
@@ -547,7 +565,7 @@ const App = {
     });
 
     // 复制一份实现无缝滚动
-    container.innerHTML = `
+    container.innerHTML = safeHtml`
       <div class="ticker-track">
         <div class="ticker-group">${items.join('')}</div>
         <div class="ticker-group">${items.join('')}</div>
@@ -568,7 +586,7 @@ const App = {
     const impactIcon = impactClass === '利好' ? 'arrow-up' : impactClass === '利空' ? 'arrow-down' : 'minus';
     const impactColor = impactClass === '利好' ? 'var(--accent-green)' : impactClass === '利空' ? 'var(--accent-red)' : 'var(--accent-orange)';
 
-    body.innerHTML = `
+    body.innerHTML = safeHtml`
       <div style="margin-bottom:20px;">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
           <span class="news-impact ${impactClass}" style="font-size:14px;padding:4px 14px;">${news.impact}</span>
@@ -635,13 +653,13 @@ const App = {
 
     // Header
     h += '<div style="margin-bottom:20px;">';
-    h += '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:4px;">' + fund.code + ' · ' + fund.type + '</div>';
-    h += '<div style="font-size:20px;font-weight:700;margin-bottom:4px;">' + fund.name + '</div>';
+    h += '<div style="font-size:12px;color:var(--text-tertiary);margin-bottom:4px;">' + escapeHtml(fund.code) + ' · ' + escapeHtml(fund.type) + '</div>';
+    h += '<div style="font-size:20px;font-weight:700;margin-bottom:4px;">' + escapeHtml(fund.name) + '</div>';
     h += '<div style="display:flex;gap:12px;font-size:13px;color:var(--text-secondary);">';
-    h += '<span>规模: ' + fund.fundSize + '</span>';
-    h += '<span>风险: ' + fund.risk + '</span>';
-    h += '<span>策略: ' + fund.focus + '</span>';
-    h += '<span>AI评分: <strong style="color:var(--accent-green);">' + fund.score + '/100</strong></span>';
+    h += '<span>规模: ' + escapeHtml(fund.fundSize) + '</span>';
+    h += '<span>风险: ' + escapeHtml(fund.risk) + '</span>';
+    h += '<span>策略: ' + escapeHtml(fund.focus) + '</span>';
+    h += '<span>AI评分: <strong style="color:var(--accent-green);">' + escapeHtml(fund.score) + '/100</strong></span>';
     h += '</div></div>';
 
     // Stats grid
@@ -654,7 +672,7 @@ const App = {
     var yearVal = fund.year || 0;
 
     h += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;">';
-    h += '<div style="padding:12px;background:rgba(0,0,0,0.2);border-radius:8px;text-align:center;"><div style="font-size:12px;color:var(--text-tertiary);">单位净值</div><div style="font-size:22px;font-weight:700;color:var(--accent-cyan);">' + fund.nav + '</div></div>';
+    h += '<div style="padding:12px;background:rgba(0,0,0,0.2);border-radius:8px;text-align:center;"><div style="font-size:12px;color:var(--text-tertiary);">单位净值</div><div style="font-size:22px;font-weight:700;color:var(--accent-cyan);">' + escapeHtml(fund.nav) + '</div></div>';
     h += '<div style="padding:12px;background:rgba(0,0,0,0.2);border-radius:8px;text-align:center;"><div style="font-size:12px;color:var(--text-tertiary);">今日涨跌</div><div style="font-size:22px;font-weight:700;color:' + todayColor + '">' + todaySign + fund.todayChange + '%</div></div>';
     h += '<div style="padding:12px;background:rgba(0,0,0,0.2);border-radius:8px;text-align:center;"><div style="font-size:12px;color:var(--text-tertiary);">近1周</div><div style="font-size:18px;font-weight:600;color:' + weekColor + '">' + weekSign + fund.week + '%</div></div>';
     h += '<div style="padding:12px;background:rgba(0,0,0,0.2);border-radius:8px;text-align:center;"><div style="font-size:12px;color:var(--text-tertiary);">近1年</div><div style="font-size:18px;font-weight:600;color:' + yearColor + '">' + yearSign + yearVal + '%</div></div>';
@@ -672,16 +690,16 @@ const App = {
     // AI Analysis
     h += '<div style="margin-bottom:20px;">';
     h += '<div style="font-size:14px;font-weight:600;margin-bottom:8px;"><i class="fas fa-robot" style="color:var(--accent-cyan);"></i> AI深度分析</div>';
-    h += '<div style="font-size:14px;line-height:1.8;color:var(--text-secondary);padding:12px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid var(--accent-cyan);">' + fund.aiAnalysis + '</div>';
+    h += '<div style="font-size:14px;line-height:1.8;color:var(--text-secondary);padding:12px;background:rgba(0,0,0,0.15);border-radius:8px;border-left:3px solid var(--accent-cyan);">' + escapeHtml(fund.aiAnalysis) + '</div>';
     h += '</div>';
 
     // Advice
     h += '<div style="margin-bottom:16px;">';
     h += '<div style="font-size:14px;font-weight:600;margin-bottom:8px;"><i class="fas fa-lightbulb" style="color:var(--accent-orange);"></i> 投资建议</div>';
     h += '<div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(16,185,129,0.05);border-radius:8px;border:1px solid rgba(16,185,129,0.15);">';
-    h += '<span style="padding:4px 12px;border-radius:20px;font-weight:600;font-size:13px;background:rgba(16,185,129,0.15);color:var(--accent-green);">' + fund.advice.action + '</span>';
-    h += '<span style="font-size:13px;color:var(--text-secondary);flex:1;">' + fund.advice.reason + '</span>';
-    h += '<span style="font-size:13px;color:var(--accent-orange);">' + fund.advice.confidence + '</span>';
+    h += '<span style="padding:4px 12px;border-radius:20px;font-weight:600;font-size:13px;background:rgba(16,185,129,0.15);color:var(--accent-green);">' + escapeHtml(fund.advice.action) + '</span>';
+    h += '<span style="font-size:13px;color:var(--text-secondary);flex:1;">' + escapeHtml(fund.advice.reason) + '</span>';
+    h += '<span style="font-size:13px;color:var(--accent-orange);">' + escapeHtml(fund.advice.confidence) + '</span>';
     h += '</div></div>';
 
     // Disclaimer
@@ -777,7 +795,7 @@ const App = {
       }
 
       if (merged.length === 0) {
-        resultsEl.innerHTML = `
+        resultsEl.innerHTML = safeHtml`
           <div class="card" style="margin-top:12px;padding:20px;text-align:center;color:var(--text-tertiary);">
             <i class="fas fa-search-minus" style="font-size:32px;display:block;margin-bottom:8px;opacity:0.4;"></i>
             未找到 "<strong>${q}</strong>"，试试手动添加
@@ -828,7 +846,7 @@ const App = {
         const changeColor = change >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
         const changeIcon = change >= 0 ? 'arrow-up' : 'arrow-down';
 
-        resultsEl.innerHTML += `
+        resultsEl.innerHTML += safeHtml`
           <div class="card search-result-item" onclick="App.selectFund('${r.code}', '${r.name.replace(/'/g, "\\'")}', '${r.nav}', '${r.type}', '${r.focus}', ${isIndex})"
                style="padding:14px 18px;margin-bottom:8px;cursor:pointer;transition:all 0.2s;
                       border:1px solid var(--border-color);"
@@ -891,7 +909,7 @@ const App = {
     const isPositive = change >= 0;
 
     addStep.style.display = 'block';
-    addStep.innerHTML = `
+    addStep.innerHTML = safeHtml`
       <div style="margin-top:8px;">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;
                     padding:14px;background:rgba(16,185,129,0.05);border-radius:var(--radius-sm);
@@ -1068,7 +1086,7 @@ const App = {
     countEl.textContent = this.portfolio.length;
 
     if (this.portfolio.length === 0) {
-      listContainer.innerHTML = `
+      listContainer.innerHTML = safeHtml`
         <div class="card" style="text-align:center;padding:40px;color:var(--text-tertiary);">
           <i class="fas fa-inbox" style="font-size:40px;display:block;margin-bottom:12px;opacity:0.4;"></i>
           <p>还没有持仓记录，输入基金/股票代码开始追踪</p>
@@ -1101,7 +1119,7 @@ const App = {
     const negativeCount = items.filter(i => i.pnl != null && i.pnl < 0).length;
 
     // 汇总卡片
-    let html = `
+    let html = safeHtml`
       <div class="portfolio-summary">
         <div class="portfolio-summary-item">
           <div class="label">总投资成本</div>
@@ -1158,7 +1176,7 @@ const App = {
       const pnlAmount = i.pnlTotal != null ? ((i.pnlTotal >= 0 ? '+' : '') + '¥' + i.pnlTotal.toFixed(2)) : 'N/A';
       const currentNavStr = i.currentNav != null ? i.currentNav.toFixed(4) : '--';
 
-      html += `
+      html += safeHtml`
         <tr>
           <td><span class="portfolio-code">${i.code}</span></td>
           <td><span class="portfolio-name">${i.name}</span></td>
@@ -1330,7 +1348,7 @@ function renderDetailedChart(values, fundName) {
     v,
   }));
 
-  const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const pathD = pts.map((p, i) => safeHtml`${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
   const isUp = values[values.length - 1] >= values[0];
   const stroke = isUp ? '#10b981' : '#ef4444';
 
@@ -1353,7 +1371,7 @@ function renderDetailedChart(values, fundName) {
     { x: pts[pts.length - 1].x, label: '今日' },
   ];
 
-  return `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;">
+  return safeHtml`<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;">
     <defs>
       <linearGradient id="chartFill_${isUp ? 'up' : 'down'}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="${stroke}" stop-opacity="0.2"/>
@@ -1425,7 +1443,7 @@ function renderSparkline(values, width, height) {
   const firstPt = points[0];
   const fillD = `${pathD} L${lastPt},${padding + plotH} L${firstPt.split(',')[0]},${padding + plotH} Z`;
 
-  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;">
+  return safeHtml`<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;">
     <defs>
       <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.25"/>

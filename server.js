@@ -9,6 +9,41 @@ const realtimeHotSectorsProvider = require('./services/realtimeHotSectorsProvide
 const cache = require('./services/cacheManager');
 const { fetchText } = require('./services/fetcher');
 const app = express();
+// ============ 安全中间件 ============
+const helmet = require("helmet");
+const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com", "fonts.googleapis.com", "cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdnjs.cloudflare.com", "cdn.jsdelivr.net"],
+      fontSrc: ["'self'", "fonts.gstatic.com", "cdnjs.cloudflare.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+}));
+
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || "*",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"],
+}));
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120, // 120 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "请求过于频繁，请稍后再试" },
+});
+app.use("/api/", limiter);
+
+
 const PORT = process.env.PORT || 3000;
 
 // ============ 代理配置检测 ============

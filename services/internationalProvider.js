@@ -88,47 +88,9 @@ async function fetchInternationalForex() {
  * 使用子进程调用 Python，隔离网络栈
  */
 async function fetchYahooIndices() {
-  const script = `
-import json, sys
-try:
-    import yfinance as yf
-except:
-    print(json.dumps({"status":"no_module"}))
-    sys.exit(0)
 
-symbols = ${JSON.stringify(Object.keys(YAHOO_SYMBOLS))}
-result = {}
-for sym in symbols:
-    try:
-        t = yf.Ticker(sym)
-        info = t.info
-        price = info.get("regularMarketPrice") or info.get("previousClose")
-        prev = info.get("regularMarketPreviousClose") or info.get("previousClose")
-        if price and prev:
-            change = price - prev
-            pct = (change / prev) * 100
-            result[sym] = {"price": round(price, 4), "change": round(change, 4), "changePct": round(pct, 4), "trend": "up" if change >= 0 else "down"}
-        else:
-            result[sym] = None
-    except:
-        result[sym] = None
-print(json.dumps({"status":"ok","data":result}))
-`;
-
-  try {
-    const { execSync } = require('child_process');
-    const stdout = execSync('python3 -c "' + script.replace(/"/g, '\\"').replace(/\n/g, ' ') + '"', {
-      timeout: 30000,
-      encoding: 'utf-8',
-      maxBuffer: 1024 * 1024,
-    });
-    // 如果上面失败，用文件方式
-  } catch (e) {
-    // 尝试用文件方式
-  }
-
-  // 用文件方式调用 Python（更可靠）
-  const { execSync } = require('child_process');
+    // 用文件方式调用 Python（避免命令行注入，使用 execFileSync 参数数组）
+  const { execFileSync } = require('child_process');
   const fs = require('fs');
   const path = require('path');
 
@@ -161,8 +123,8 @@ print(json.dumps({"status":"ok","data":result}))
   try {
     fs.writeFileSync(tmpScript, pyCode, 'utf-8');
     // 对路径加双引号处理空格
-    const cmd = 'python "' + tmpScript + '"';
-    const stdout = execSync(cmd, {
+    // Use execFileSync with argument array to avoid shell injection
+    const stdout = execFileSync('python', [tmpScript], {
       timeout: 60000,
       encoding: 'utf-8',
       maxBuffer: 1024 * 1024,

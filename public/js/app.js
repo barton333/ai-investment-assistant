@@ -302,56 +302,42 @@ const App = {
       const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'normal';
       const actionClass = fund.advice.action.includes('买入') ? 'buy' : fund.advice.action.includes('持有') || fund.advice.action.includes('加仓') ? 'hold' : 'watch';
       const isRealtime = fund.source === 'realtime';
-      const fundBadge = isRealtime ? '<span class="fund-source-badge">实时净值</span>' : '';
-      const navDateInfo = fund.navDate ? `<span style="font-size:11px;color:var(--text-tertiary);margin-left:6px;">${fund.navDate}</span>` : '';
-      
-      return safeHtml`
-        <div class="card fund-card fade-in stagger-${i+1}" onclick="App.openFundDetail(${i})">
-          <div class="fund-rank ${rankClass}">${fund.rank}</div>
-          <div class="fund-body">
-            <div class="fund-header">
-              <div class="fund-name">
-                ${fund.name}
-                <span class="fund-code">${fund.code} · ${fund.type} · ${fund.fundSize}</span>
-                ${fundBadge}
-              </div>
-              <div class="fund-rating">${'★'.repeat(fund.rating)}${'☆'.repeat(5-fund.rating)}</div>
-            </div>
-            <div class="fund-stats">
-              <div class="fund-stat">
-                <div class="label">今日 <span style="font-size:10px;color:var(--text-tertiary);">实时</span></div>
-                <div class="value ${parseFloat(fund.todayChange) >= 0 ? 'up' : 'down'}">
-                  ${parseFloat(fund.todayChange) >= 0 ? '+' : ''}${fund.todayChange}%
-                </div>
-              </div>
-              <div class="fund-stat">
-                <div class="label">近1周</div>
-                <div class="value ${fund.week >= 0 ? 'up' : 'down'}">${fund.week >= 0 ? '+' : ''}${fund.week}%</div>
-              </div>
-              <div class="fund-stat">
-                <div class="label">近1月</div>
-                <div class="value ${fund.month >= 0 ? 'up' : 'down'}">${fund.month >= 0 ? '+' : ''}${fund.month}%</div>
-              </div>
-              <div class="fund-stat">
-                <div class="label">近1年</div>
-                <div class="value ${fund.year >= 0 ? 'up' : 'down'}">${fund.year >= 0 ? '+' : ''}${fund.year}%</div>
-              </div>
-            </div>
-            <div class="fund-sparkline">
-              ${fund.navHistory ? renderSparkline(fund.navHistory, 140, 36) : ''}
-            </div>
-            <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">
-              <strong style="color:var(--accent-cyan);">AI综合评分：${fund.score}/100</strong> · 
-              风险等级：${fund.risk} · 策略：${fund.focus}
-              ${navDateInfo}
-            </div>
-          </div>
-          <div class="fund-action">
-            <span class="action-tag ${actionClass}">${fund.advice.action}</span>
-            <span class="confidence">${fund.advice.confidence} ${fund.advice.target}</span>
-          </div>
-        </div>
-      `;
+      const todayVal = parseFloat(fund.todayChange);
+      const stars = '\u2605'.repeat(fund.rating) + '\u2606'.repeat(5 - fund.rating);
+
+      let h = '<div class="card fund-card fade-in stagger-' + (i + 1) + '" onclick="App.openFundDetail(' + i + ')">';
+      h += '<div class="fund-rank ' + rankClass + '">' + escapeHtml(fund.rank) + '</div>';
+      h += '<div class="fund-body"><div class="fund-header"><div class="fund-name">';
+      h += escapeHtml(fund.name);
+      h += '<span class="fund-code">' + escapeHtml(fund.code) + ' \u00b7 ' + escapeHtml(fund.type) + ' \u00b7 ' + escapeHtml(fund.fundSize) + '</span>';
+      if (isRealtime) h += '<span class="fund-source-badge">\u5b9e\u65f6\u51c0\u503c</span>';
+      h += '</div><div class="fund-rating">' + stars + '</div></div>';
+
+      h += '<div class="fund-stats">';
+      h += '<div class="fund-stat"><div class="label">\u4eca\u65e5 <span style="font-size:10px;color:var(--text-tertiary);">\u5b9e\u65f6</span></div>';
+      h += '<div class="value ' + (todayVal >= 0 ? 'up' : 'down') + '">' + (todayVal >= 0 ? '+' : '') + escapeHtml(fund.todayChange) + '%</div></div>';
+      h += '<div class="fund-stat"><div class="label">\u8fd11\u5468</div>';
+      h += '<div class="value ' + (fund.week >= 0 ? 'up' : 'down') + '">' + (fund.week >= 0 ? '+' : '') + escapeHtml(fund.week) + '%</div></div>';
+      h += '<div class="fund-stat"><div class="label">\u8fd11\u6708</div>';
+      h += '<div class="value ' + (fund.month >= 0 ? 'up' : 'down') + '">' + (fund.month >= 0 ? '+' : '') + escapeHtml(fund.month) + '%</div></div>';
+      h += '<div class="fund-stat"><div class="label">\u8fd11\u5e74</div>';
+      h += '<div class="value ' + (fund.year >= 0 ? 'up' : 'down') + '">' + (fund.year >= 0 ? '+' : '') + escapeHtml(fund.year) + '%</div></div>';
+      h += '</div>';
+
+      h += '<div class="fund-sparkline">';
+      if (fund.navHistory) h += renderSparkline(fund.navHistory, 140, 36);
+      h += '</div>';
+
+      h += '<div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">';
+      h += '<strong style="color:var(--accent-cyan);">AI\u7efc\u5408\u8bc4\u5206\uff1a' + escapeHtml(fund.score) + '/100</strong> \u00b7 ';
+      h += '\u98ce\u9669\u7b49\u7ea7\uff1a' + escapeHtml(fund.risk) + ' \u00b7 \u7b56\u7565\uff1a' + escapeHtml(fund.focus);
+      if (fund.navDate) h += '<span style="font-size:11px;color:var(--text-tertiary);margin-left:6px;">' + escapeHtml(fund.navDate) + '</span>';
+      h += '</div></div>';
+
+      h += '<div class="fund-action"><span class="action-tag ' + actionClass + '">' + escapeHtml(fund.advice.action) + '</span>';
+      h += '<span class="confidence">' + escapeHtml(fund.advice.confidence) + ' ' + escapeHtml(fund.advice.target) + '</span></div>';
+      h += '</div>';
+      return h;
     }).join('');
   },
 
@@ -387,37 +373,34 @@ const App = {
     if (!container || !this.data.globalNews) return;
 
     const isRealtime = this.data._meta?.news_source === 'realtime';
-    const newsBadge = isRealtime ? '<span class="news-source-badge">实时快讯</span>' : '';
 
     container.innerHTML = this.data.globalNews.map((news, i) => {
       const impactClass = news.impact.includes('利好') ? '利好' : news.impact.includes('利空') ? '利空' : news.impact.includes('中性') ? '中性' : '中性';
       const highlightClass = news.impact.includes('利好') && i < 2 ? 'news-highlight' : news.impact.includes('利空') ? 'news-warning' : '';
-      
-      return safeHtml`
-        <div class="card news-card fade-in stagger-${Math.min(i+1, 5)} ${highlightClass}"
-             onclick="App.openNewsDetail(${i})" style="cursor:pointer;">
-          <div class="news-header">
-            <span class="news-impact ${impactClass}">${news.impact}</span>
-            <div style="flex:1;">
-              <div class="news-topic">${news.topic}</div>
-            </div>
-            ${newsBadge}
-          </div>
-          <p class="news-detail">${news.detail}</p>
-          <div class="news-sectors">
-            ${news.affectedSectors.map(s => `<span class="sector-tag">${s}</span>`).join('')}
-          </div>
-          <div class="news-meta">
-            <span><i class="far fa-building"></i> ${news.source}</span>
-            <span><i class="far fa-clock"></i> ${news.time}</span>
-            <span><i class="far fa-calendar"></i> ${news.date}</span>
-            ${news.uri ? `<span><i class="fas fa-external-link-alt"></i> <a href="${news.uri}" target="_blank" onclick="event.stopPropagation();" style="color:var(--accent-cyan);text-decoration:none;">查看原文</a></span>` : ''}
-          </div>
-          <div class="news-click-hint">
-            <i class="fas fa-chevron-right"></i> 点击查看深度分析
-          </div>
-        </div>
-      `;
+
+      let h = '<div class="card news-card fade-in stagger-' + Math.min(i + 1, 5) + ' ' + highlightClass + '" onclick="App.openNewsDetail(' + i + ')" style="cursor:pointer;">';
+
+      h += '<div class="news-header"><span class="news-impact ' + impactClass + '">' + escapeHtml(news.impact) + '</span>';
+      h += '<div style="flex:1;"><div class="news-topic">' + escapeHtml(news.topic) + '</div></div>';
+      if (isRealtime) h += '<span class="news-source-badge">\u5b9e\u65f6\u5feb\u8baf</span>';
+      h += '</div>';
+
+      h += '<p class="news-detail">' + escapeHtml(news.detail) + '</p>';
+
+      h += '<div class="news-sectors">';
+      if (news.affectedSectors) news.affectedSectors.forEach(function(s) { h += '<span class="sector-tag">' + escapeHtml(s) + '</span>'; });
+      h += '</div>';
+
+      h += '<div class="news-meta">';
+      h += '<span><i class="far fa-building"></i> ' + escapeHtml(news.source) + '</span>';
+      h += '<span><i class="far fa-clock"></i> ' + escapeHtml(news.time) + '</span>';
+      h += '<span><i class="far fa-calendar"></i> ' + escapeHtml(news.date) + '</span>';
+      if (news.uri) h += '<span><i class="fas fa-external-link-alt"></i> <a href="' + escapeHtml(news.uri) + '" target="_blank" onclick="event.stopPropagation();" style="color:var(--accent-cyan);text-decoration:none;">\u67e5\u770b\u539f\u6587</a></span>';
+      h += '</div>';
+
+      h += '<div class="news-click-hint"><i class="fas fa-chevron-right"></i> \u70b9\u51fb\u67e5\u770b\u6df1\u5ea6\u5206\u6790</div>';
+      h += '</div>';
+      return h;
     }).join('');
   },
 
@@ -426,25 +409,24 @@ const App = {
     const container = document.getElementById('investmentAdvice');
     if (!container || !this.data.investmentAdvice) return;
 
-    container.innerHTML = this.data.investmentAdvice.map((advice, i) => safeHtml`
-      <div class="card advice-card fade-in stagger-${i+1}">
-        <div class="advice-type-bar" style="background:${advice.color};"></div>
-        <div class="advice-title" style="padding-left:8px;">
-          <i class="fas fa-${advice.type === 'short' ? 'bolt' : advice.type === 'medium' ? 'chart-line' : advice.type === 'long' ? 'bullseye' : 'shield-alt'}" 
-             style="color:${advice.color};"></i>
-          ${advice.title}
-        </div>
-        <ul>
-          ${advice.advice.map(a => `<li>${a}</li>`).join('')}
-        </ul>
-        ${advice.risk ? `
-          <div class="advice-risk">
-            <i class="fas fa-exclamation-triangle"></i>
-            ${advice.risk}
-          </div>
-        ` : ''}
-      </div>
-    `).join('');
+    container.innerHTML = this.data.investmentAdvice.map((advice, i) => {
+      const iconMap = { short: 'bolt', medium: 'chart-line', long: 'bullseye' };
+      const adviceIcon = iconMap[advice.type] || 'shield-alt';
+
+      let h = '<div class="card advice-card fade-in stagger-' + (i + 1) + '">';
+      h += '<div class="advice-type-bar" style="background:' + escapeHtml(advice.color) + ';"></div>';
+      h += '<div class="advice-title" style="padding-left:8px;">';
+      h += '<i class="fas fa-' + adviceIcon + '" style="color:' + escapeHtml(advice.color) + ';"></i> ';
+      h += escapeHtml(advice.title);
+      h += '</div><ul>';
+      if (advice.advice) advice.advice.forEach(function(a) { h += '<li>' + escapeHtml(a) + '</li>'; });
+      h += '</ul>';
+      if (advice.risk) {
+        h += '<div class="advice-risk"><i class="fas fa-exclamation-triangle"></i> ' + escapeHtml(advice.risk) + '</div>';
+      }
+      h += '</div>';
+      return h;
+    }).join('');
   },
 
   // --- USD Products ---
@@ -479,74 +461,41 @@ const App = {
     const sentClass = insights.marketSentiment.includes('乐观') || insights.marketSentiment.includes('偏多') 
       ? 'positive' : insights.marketSentiment.includes('谨慎') ? 'neutral' : 'negative';
 
-    container.innerHTML = safeHtml`
-      <div class="card insight-card fade-in">
-        <div class="insight-header">
-          <i class="fas fa-brain" style="font-size:24px;color:var(--accent-cyan);"></i>
-          <div>
-            <div style="font-size:16px;font-weight:600;">AI市场研判</div>
-            <div style="font-size:13px;color:var(--text-secondary);">
-              综合信心指数: <strong style="color:var(--accent-green);">${insights.aiConfidenceIndex}%</strong>
-            </div>
-          </div>
-          <span class="sentiment-badge ${sentClass}" style="margin-left:auto;">
-            <i class="fas fa-${sentClass === 'positive' ? 'smile' : sentClass === 'neutral' ? 'meh' : 'frown'}"></i>
-            ${insights.marketSentiment}
-          </span>
-        </div>
+    let h = '<div class="card insight-card fade-in"><div class="insight-header">';
+    h += '<i class="fas fa-brain" style="font-size:24px;color:var(--accent-cyan);"></i>';
+    h += '<div><div style="font-size:16px;font-weight:600;">AI\u5e02\u573a\u7814\u5224</div>';
+    h += '<div style="font-size:13px;color:var(--text-secondary);">\u7efc\u5408\u4fe1\u5fc3\u6307\u6570: <strong style="color:var(--accent-green);">' + escapeHtml(insights.aiConfidenceIndex) + '%</strong></div></div>';
+    h += '<span class="sentiment-badge ' + sentClass + '" style="margin-left:auto;"><i class="fas fa-' + (sentClass === 'positive' ? 'smile' : sentClass === 'neutral' ? 'meh' : 'frown') + '"></i> ' + escapeHtml(insights.marketSentiment) + '</span>';
+    h += '</div>';
 
-        <div style="font-size:14px;font-weight:600;margin-bottom:8px;">
-          <i class="fas fa-bullhorn" style="color:var(--accent-orange);"></i>
-          核心主题: ${insights.keyTheme}
-        </div>
+    h += '<div style="font-size:14px;font-weight:600;margin-bottom:8px;"><i class="fas fa-bullhorn" style="color:var(--accent-orange);"></i> \u6838\u5fc3\u4e3b\u9898: ' + escapeHtml(insights.keyTheme) + '</div>';
+    h += '<div class="insight-prediction"><i class="fas fa-robot" style="color:var(--accent-cyan);margin-right:8px;"></i> ' + escapeHtml(insights.prediction) + '</div>';
 
-        <div class="insight-prediction">
-          <i class="fas fa-robot" style="color:var(--accent-cyan);margin-right:8px;"></i>
-          ${insights.prediction}
-        </div>
+    // Hot sectors
+    h += '<div style="margin-bottom:8px;"><div style="font-size:14px;font-weight:600;margin-bottom:10px;"><i class="fas fa-fire" style="color:var(--accent-orange);"></i> \u70ed\u95e8\u677f\u5757\u52a8\u91cf\u6392\u884c</div><div class="hot-sectors">';
+    if (insights.hotSectors) insights.hotSectors.forEach(function(s) {
+      h += '<div class="hot-sector"><div class="sector-name">' + escapeHtml(s.name) + '</div>';
+      h += '<div class="sector-momentum">\u52a8\u91cf\u6307\u6570: ' + escapeHtml(s.momentum) + '/100</div>';
+      h += '<div class="momentum-bar"><div class="fill" style="width:' + escapeHtml(s.momentum) + '%;"></div></div>';
+      h += '<div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">' + escapeHtml(s.reason) + '</div></div>';
+    });
+    h += '</div></div>';
 
-        <div style="margin-bottom:8px;">
-          <div style="font-size:14px;font-weight:600;margin-bottom:10px;">
-            <i class="fas fa-fire" style="color:var(--accent-orange);"></i>
-            热门板块动量排行
-          </div>
-          <div class="hot-sectors">
-            ${insights.hotSectors.map(s => `
-              <div class="hot-sector">
-                <div class="sector-name">${s.name}</div>
-                <div class="sector-momentum">动量指数: ${s.momentum}/100</div>
-                <div class="momentum-bar">
-                  <div class="fill" style="width:${s.momentum}%;"></div>
-                </div>
-                <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">${s.reason}</div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
+    // Top picks
+    h += '<div style="margin-bottom:16px;"><div style="font-size:14px;font-weight:600;margin-bottom:10px;"><i class="fas fa-trophy" style="color:var(--accent-orange);"></i> AI\u7cbe\u9009TOP 5\u63a8\u8350</div>';
+    if (insights.topPicks) insights.topPicks.forEach(function(pick) {
+      h += '<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;margin-bottom:6px;background:rgba(255,255,255,0.03);border-radius:8px;">';
+      h += '<span style="font-weight:700;color:var(--accent-cyan);font-size:13px;width:24px;">#' + escapeHtml(pick.rank) + '</span>';
+      h += '<span style="flex:1;font-size:13px;font-weight:500;">' + escapeHtml(pick.name) + '</span>';
+      h += '<span style="font-size:12px;color:var(--accent-green);font-weight:600;">' + escapeHtml(pick.aiScore) + '\u5206</span>';
+      h += '<span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(16,185,129,0.1);color:var(--accent-green);">' + escapeHtml(pick.action) + '</span></div>';
+    });
+    h += '</div>';
 
-        <div style="margin-bottom:16px;">
-          <div style="font-size:14px;font-weight:600;margin-bottom:10px;">
-            <i class="fas fa-trophy" style="color:var(--accent-orange);"></i>
-            AI精选TOP 5推荐
-          </div>
-          ${insights.topPicks.map(pick => `
-            <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;margin-bottom:6px;background:rgba(255,255,255,0.03);border-radius:8px;">
-              <span style="font-weight:700;color:var(--accent-cyan);font-size:13px;width:24px;">#${pick.rank}</span>
-              <span style="flex:1;font-size:13px;font-weight:500;">${pick.name}</span>
-              <span style="font-size:12px;color:var(--accent-green);font-weight:600;">${pick.aiScore}分</span>
-              <span style="font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(16,185,129,0.1);color:var(--accent-green);">${pick.action}</span>
-            </div>
-          `).join('')}
-        </div>
-
-        <div class="insight-risk">
-          <i class="fas fa-shield-alt"></i>
-          <div>
-            <strong>风险提示：</strong>${insights.riskWarning}
-          </div>
-        </div>
-      </div>
-    `;
+    // Risk warning
+    h += '<div class="insight-risk"><i class="fas fa-shield-alt"></i><div><strong>\u98ce\u9669\u63d0\u793a\uff1a</strong>' + escapeHtml(insights.riskWarning) + '</div></div>';
+    h += '</div>';
+    container.innerHTML = h;
   },
 
   // --- News Ticker (自动滚动) ---
@@ -565,12 +514,11 @@ const App = {
     });
 
     // 复制一份实现无缝滚动
-    container.innerHTML = safeHtml`
-      <div class="ticker-track">
-        <div class="ticker-group">${items.join('')}</div>
-        <div class="ticker-group">${items.join('')}</div>
-      </div>
-    `;
+    // 注意: items 已由 safeHtml 转义过, 直接拼接字符串(不再用 safeHtml 避免双重转义)
+    container.innerHTML = '<div class="ticker-track">' +
+      '<div class="ticker-group">' + items.join('') + '</div>' +
+      '<div class="ticker-group">' + items.join('') + '</div>' +
+      '</div>';
   },
 
   // ============ NEWS DETAIL MODAL ============
